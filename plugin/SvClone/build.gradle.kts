@@ -1,4 +1,4 @@
-version = "1.0.0"
+version = "1.0.1"
 description = "Clona servidores Discord. Baseado em https://bettercloner.vercel.app"
 
 aliucord {
@@ -6,10 +6,16 @@ aliucord {
 
     changelog.set(
         """
-                
-            # 1.0.0
-            * launch
+            # 1.0.1
+            * Corrigido erro de Iterator
+            * GUI mais arredondada
+            * Botao expandir/minimizar logs
+            * Notificacoes de progresso
+            * Logs no Aliucord
+            * Botao no perfil do servidor corrigido
             
+            # 1.0.0
+            * Launch
         """.trimIndent()
     )
 }
