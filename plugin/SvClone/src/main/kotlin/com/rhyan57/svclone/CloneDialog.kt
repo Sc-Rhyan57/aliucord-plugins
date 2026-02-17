@@ -21,10 +21,6 @@ import com.discord.stores.StoreStream
 import com.discord.utilities.icon.IconUtils
 import com.discord.utilities.images.MGImages
 import com.facebook.drawee.view.SimpleDraweeView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 object CloneDialog {
 
@@ -262,11 +258,11 @@ object CloneDialog {
                 return
             }
             
-            CoroutineScope(Dispatchers.IO).launch {
+            Utils.threadPool.execute {
                 try {
                     val guild = StoreStream.getGuilds().getGuild(guildId.toLong())
                     if (guild != null) {
-                        withContext(Dispatchers.Main) {
+                        Utils.mainThread.post {
                             if (isSource) {
                                 sourceName.text = guild.name
                                 sourceMemberCount.text = "${guild.memberCount} membros"
@@ -287,7 +283,7 @@ object CloneDialog {
                         }
                     }
                 } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
+                    Utils.mainThread.post {
                         if (isSource) sourcePreview.visibility = View.GONE
                         else targetPreview.visibility = View.GONE
                     }
