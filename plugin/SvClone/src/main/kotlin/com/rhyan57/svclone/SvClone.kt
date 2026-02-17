@@ -1,11 +1,9 @@
 package com.rhyan57.svclone
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -30,13 +28,12 @@ import com.lytefast.flexinput.R
 
 @AliucordPlugin
 class SvClone : Plugin() {
-    
+
     private val profileButtonId = View.generateViewId()
 
     override fun start(context: Context) {
         TokenManager.initialize(settings)
         clearNotifications(context)
-        checkPendingProgress(context)
 
         commands.registerCommand(
             "clone-server",
@@ -48,22 +45,31 @@ class SvClone : Plugin() {
         ) { ctx ->
             val serverId = ctx.getStringOrDefault("server_id", "")
             val token = ctx.getStringOrDefault("token", "")
-            Utils.mainThread.post {
-                CloneDialog.show(ctx.context, serverId, token, settings)
-            }
+            CloneDialog.show(ctx.context, serverId, token, settings)
             CommandsAPI.CommandResult("Abrindo diálogo de clonagem...", null, false)
+        }
+
+        commands.registerCommand(
+            "show-clone-progress",
+            "Reabrir a janela de clonagem em andamento"
+        ) { ctx ->
+            val state = ProgressStateManager.loadProgress(ctx.context)
+            if (state == null || state.isComplete) {
+                CommandsAPI.CommandResult("❌ Nenhuma clonagem em andamento.", null, false)
+            } else {
+                CloneDialog.showActiveSession(ctx.context, settings)
+                CommandsAPI.CommandResult("Reabrindo painel de clonagem...", null, false)
+            }
         }
 
         commands.registerCommand(
             "add-token",
             "Adicionar token para rotação de contas",
-            listOf(
-                Utils.createCommandOption(ApplicationCommandType.STRING, "token", "Token Discord", null, true)
-            )
+            listOf(Utils.createCommandOption(ApplicationCommandType.STRING, "token", "Token Discord", null, true))
         ) { ctx ->
             val token = ctx.getRequiredString("token")
             TokenManager.addToken(settings, token)
-            CommandsAPI.CommandResult("✅ Token adicionado com sucesso!", null, false)
+            CommandsAPI.CommandResult("✅ Token adicionado!", null, false)
         }
 
         commands.registerCommand(
@@ -74,10 +80,8 @@ class SvClone : Plugin() {
             if (tokens.isEmpty()) {
                 CommandsAPI.CommandResult("❌ Nenhum token salvo.", null, false)
             } else {
-                val message = tokens.mapIndexed { index, token ->
-                    "${index + 1}. ${TokenManager.getTokenInfo(token)}"
-                }.joinToString("\n")
-                CommandsAPI.CommandResult("📋 Tokens salvos:\n$message", null, false)
+                val message = tokens.mapIndexed { i, t -> "${i + 1}. ${TokenManager.getTokenInfo(t)}" }.joinToString("\n")
+                CommandsAPI.CommandResult("📋 Tokens:\n$message", null, false)
             }
         }
 
@@ -96,21 +100,12 @@ class SvClone : Plugin() {
                     val sheet = param.thisObject as? WidgetGuildProfileSheet ?: return@after
                     val bindingMethod = ReflectUtils.getMethodByArgs(WidgetGuildProfileSheet::class.java, "getBinding")
                     val binding = bindingMethod.invoke(sheet) as? WidgetGuildProfileSheetBinding ?: return@after
-                    
                     val rootView = binding.f.rootView as? ViewGroup ?: return@after
-                    val actionsCard = rootView.findViewById<CardView>(
-                        Utils.getResId("guild_profile_sheet_secondary_actions", "id")
-                    ) ?: return@after
-                    
+                    val actionsCard = rootView.findViewById<CardView>(Utils.getResId("guild_profile_sheet_secondary_actions", "id")) ?: return@after
                     val actionsLayout = actionsCard.getChildAt(0) as? LinearLayout ?: return@after
-                    
-                    if (actionsLayout.findViewById<View>(profileButtonId) != null) {
-                        return@after
-                    }
-                    
+                    if (actionsLayout.findViewById<View>(profileButtonId) != null) return@after
                     val guildId = param.args[0] as? Long ?: return@after
                     val guild = StoreStream.getGuilds().getGuild(guildId) ?: return@after
-                    
                     addCloneButton(actionsLayout, guild)
                 } catch (e: Exception) {
                     logger.error("Erro ao adicionar botão no perfil:", e)
@@ -124,7 +119,6 @@ class SvClone : Plugin() {
     @SuppressLint("SetTextI18n")
     private fun addCloneButton(container: LinearLayout, guild: Guild) {
         val context = container.context
-        
         val button = TextView(context, null, 0, R.i.UiKit_Settings_Item_Icon).apply {
             id = profileButtonId
             text = "📋 Clonar Servidor"
@@ -132,85 +126,27 @@ class SvClone : Plugin() {
             val pd = DimenUtils.dpToPx(16)
             setPadding(pd, pd, pd, pd)
             typeface = ResourcesCompat.getFont(context, Constants.Fonts.whitney_semibold)
-            
             layoutParams = container.getChildAt(0).layoutParams
-            
             setOnClickListener {
                 val currentToken = TokenManager.getCurrentToken() ?: ""
                 CloneDialog.show(context, guild.getId().toString(), currentToken, settings)
             }
         }
-        
         container.addView(button)
     }
 
     private fun clearNotifications(context: Context) {
         try {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.cancel(12345)
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(12345)
         } catch (e: Exception) {
             logger.error("Erro ao limpar notificações:", e)
         }
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun checkPendingProgress(context: Context) {
-        val pendingState = ProgressStateManager.loadProgress(context) ?: return
-        
-        if (pendingState.isComplete) {
-            ProgressStateManager.clearProgress(context)
-            return
-        }
-
-        Utils.mainThread.postDelayed({
-            try {
-                val activity = Utils.appActivity ?: return@postDelayed
-                
-                val completed = mutableListOf<String>()
-                if (pendingState.settingsCloned) completed.add("Settings")
-                if (pendingState.iconCloned) completed.add("Icon")
-                if (pendingState.bannerCloned) completed.add("Banner")
-                if (pendingState.rolesCloned) completed.add("Roles")
-                if (pendingState.channelsCloned) completed.add("Channels")
-                if (pendingState.emojisCloned) completed.add("Emojis")
-                if (pendingState.stickersCloned) completed.add("Stickers")
-                if (pendingState.soundsCloned) completed.add("Sounds")
-                if (pendingState.messagesCloned) completed.add("Messages")
-                if (pendingState.bansCloned) completed.add("Bans")
-                if (pendingState.eventsCloned) completed.add("Events")
-                if (pendingState.autoModCloned) completed.add("AutoMod")
-                if (pendingState.onboardingCloned) completed.add("Onboarding")
-                if (pendingState.welcomeCloned) completed.add("Welcome")
-                
-                val messageText = buildString {
-                    append("Você tem uma clonagem em andamento:\n\n")
-                    append("Servidor: ${pendingState.serverName}\n")
-                    append("Origem: ${pendingState.sourceGuildId}\n")
-                    if (completed.isNotEmpty()) {
-                        append("\n✅ Concluído: ${completed.joinToString(", ")}")
-                    }
-                }
-
-                AlertDialog.Builder(activity)
-                    .setTitle("Continuar Clonagem?")
-                    .setMessage(messageText)
-                    .setPositiveButton("Continuar") { _, _ ->
-                        CloneDialog.showWithProgress(activity, pendingState, settings)
-                    }
-                    .setNegativeButton("Cancelar") { _, _ ->
-                        ProgressStateManager.clearProgress(activity)
-                    }
-                    .setCancelable(false)
-                    .show()
-            } catch (e: Exception) {
-                logger.error("Erro ao mostrar diálogo de progresso:", e)
-            }
-        }, 1000)
-    }
-
     override fun stop(context: Context) {
         commands.unregisterAll()
         patcher.unpatchAll()
+        CloneSession.detachUI()
         clearNotifications(context)
     }
 }
