@@ -116,43 +116,49 @@ class SvClone : Plugin() {
         }
 
         Utils.mainThread.post {
-            val messageText = buildString {
-                append("Você tem uma clonagem em andamento:\n\n")
-                append("Servidor: ${pendingState.serverName}\n")
-                append("Origem: ${pendingState.sourceGuildId}\n")
+            try {
+                val activity = Utils.appActivity ?: return@post
                 
-                val completed = mutableListOf<String>()
-                if (pendingState.settingsCloned) completed.add("Settings")
-                if (pendingState.iconCloned) completed.add("Icon")
-                if (pendingState.bannerCloned) completed.add("Banner")
-                if (pendingState.rolesCloned) completed.add("Roles")
-                if (pendingState.channelsCloned) completed.add("Channels")
-                if (pendingState.emojisCloned) completed.add("Emojis")
-                if (pendingState.stickersCloned) completed.add("Stickers")
-                if (pendingState.soundsCloned) completed.add("Sounds")
-                if (pendingState.messagesCloned) completed.add("Messages")
-                if (pendingState.bansCloned) completed.add("Bans")
-                if (pendingState.eventsCloned) completed.add("Events")
-                if (pendingState.autoModCloned) completed.add("AutoMod")
-                if (pendingState.onboardingCloned) completed.add("Onboarding")
-                if (pendingState.welcomeCloned) completed.add("Welcome")
-                
-                if (completed.isNotEmpty()) {
-                    append("\nConcluído: ${completed.joinToString(", ")}")
+                val messageText = buildString {
+                    append("Você tem uma clonagem em andamento:\n\n")
+                    append("Servidor: ${pendingState.serverName}\n")
+                    append("Origem: ${pendingState.sourceGuildId}\n")
+                    
+                    val completed = mutableListOf<String>()
+                    if (pendingState.settingsCloned) completed.add("Settings")
+                    if (pendingState.iconCloned) completed.add("Icon")
+                    if (pendingState.bannerCloned) completed.add("Banner")
+                    if (pendingState.rolesCloned) completed.add("Roles")
+                    if (pendingState.channelsCloned) completed.add("Channels")
+                    if (pendingState.emojisCloned) completed.add("Emojis")
+                    if (pendingState.stickersCloned) completed.add("Stickers")
+                    if (pendingState.soundsCloned) completed.add("Sounds")
+                    if (pendingState.messagesCloned) completed.add("Messages")
+                    if (pendingState.bansCloned) completed.add("Bans")
+                    if (pendingState.eventsCloned) completed.add("Events")
+                    if (pendingState.autoModCloned) completed.add("AutoMod")
+                    if (pendingState.onboardingCloned) completed.add("Onboarding")
+                    if (pendingState.welcomeCloned) completed.add("Welcome")
+                    
+                    if (completed.isNotEmpty()) {
+                        append("\nConcluído: ${completed.joinToString(", ")}")
+                    }
                 }
-            }
 
-            AlertDialog.Builder(context)
-                .setTitle("Continuar Clonagem?")
-                .setMessage(messageText)
-                .setPositiveButton("Continuar") { _, _ ->
-                    CloneDialog.showWithProgress(context, pendingState)
-                }
-                .setNegativeButton("Cancelar") { _, _ ->
-                    ProgressStateManager.clearProgress(context)
-                }
-                .setCancelable(false)
-                .show()
+                AlertDialog.Builder(activity)
+                    .setTitle("Continuar Clonagem?")
+                    .setMessage(messageText)
+                    .setPositiveButton("Continuar") { _, _ ->
+                        CloneDialog.showWithProgress(activity, pendingState)
+                    }
+                    .setNegativeButton("Cancelar") { _, _ ->
+                        ProgressStateManager.clearProgress(activity)
+                    }
+                    .setCancelable(false)
+                    .show()
+            } catch (e: Exception) {
+                logger.error("Erro ao mostrar diálogo de progresso:", e)
+            }
         }
     }
 

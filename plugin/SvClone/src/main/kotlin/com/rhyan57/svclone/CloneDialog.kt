@@ -2,6 +2,7 @@ package com.rhyan57.svclone
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
@@ -16,13 +17,19 @@ object CloneDialog {
 
     fun show(ctx: Context, sourceGuildId: String, defaultToken: String) {
         Utils.mainThread.post {
-            buildAndShow(ctx, sourceGuildId, defaultToken, null)
+            val activity = if (ctx is Activity) ctx else Utils.appActivity
+            if (activity != null) {
+                buildAndShow(activity, sourceGuildId, defaultToken, null)
+            }
         }
     }
 
     fun showWithProgress(ctx: Context, state: ProgressState) {
         Utils.mainThread.post {
-            buildAndShow(ctx, state.sourceGuildId, state.token, state)
+            val activity = if (ctx is Activity) ctx else Utils.appActivity
+            if (activity != null) {
+                buildAndShow(activity, state.sourceGuildId, state.token, state)
+            }
         }
     }
 
