@@ -1,206 +1,163 @@
 package com.rhyan57.svclone
 
+import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
-import android.graphics.Typeface
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import android.os.Bundle
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import com.aliucord.Utils
 import com.aliucord.annotations.AliucordPlugin
-import com.aliucord.api.CommandsAPI.CommandResult
+import com.aliucord.api.CommandsAPI
 import com.aliucord.entities.Plugin
 import com.aliucord.patcher.after
-import com.discord.api.commands.ApplicationCommandType
-import com.discord.stores.StoreStream
-import com.discord.utilities.color.ColorCompat
-import com.discord.utilities.rest.RestAPI
+import com.discord.models.domain.ModelGuild
 import com.discord.widgets.guilds.profile.WidgetGuildProfileSheet
-import com.lytefast.flexinput.R
 
 @AliucordPlugin
-@Suppress("unused")
 class SvClone : Plugin() {
 
-    override fun start(ctx: Context) {
-        clearNotifications(ctx)
-        checkPendingProgress(ctx)
+    override fun start(context: Context) {
+        clearNotifications(context)
+        checkPendingProgress(context)
 
         commands.registerCommand(
             "clone-server",
-            "Clona um servidor Discord",
+            "Clonar servidor do Discord",
             listOf(
-                Utils.createCommandOption(
-                    ApplicationCommandType.STRING,
-                    "server_id",
-                    "ID do servidor a clonar (opcional)"
-                ),
-                Utils.createCommandOption(
-                    ApplicationCommandType.STRING,
-                    "token",
-                    "Token Discord (opcional)"
-                )
+                CommandsAPI.requiredOption("server_id", "ID do servidor", CommandsAPI.OptionType.STRING),
+                CommandsAPI.option("token", "Token Discord (opcional)", CommandsAPI.OptionType.STRING)
             )
-        ) { ctx2 ->
-            val guildId = try {
-                ctx2.getString("server_id") ?: StoreStream.getGuildSelected().selectedGuildId.toString()
-            } catch (e: Exception) {
-                logger.error("Erro ao obter guild ID", null)
-                return@registerCommand CommandResult(
-                    "Erro ao obter ID do servidor!", null, false
-                )
+        ) { ctx ->
+            val serverId = ctx.getRequiredString("server_id")
+            val token = ctx.getStringOrNull("token") ?: ""
+            Utils.mainThread.post {
+                CloneDialog.show(ctx.context, serverId, token)
             }
-
-            val token = try {
-                ctx2.getString("token") ?: RestAPI.AppHeadersProvider.INSTANCE.authToken
-            } catch (e: Exception) {
-                logger.error("Erro ao obter token", null)
-                return@registerCommand CommandResult(
-                    "Erro ao obter seu token", null, false
-                )
-            }
-
-            try {
-                CloneDialog.show(Utils.appActivity, guildId, token)
-            } catch (e: Exception) {
-                logger.error("Erro ao abrir dialog", e)
-                return@registerCommand CommandResult(
-                    "Erro ao abrir dialogo: ${e.message}", null, false
-                )
-            }
-
-            CommandResult("Abrindo Clone Guild...", null, false)
+            CommandsAPI.CommandResult("Abrindo diálogo...", null, false)
         }
 
-        patcher.after<WidgetGuildProfileSheet>("onViewCreated", View::class.java, Bundle::class.java) {
-            val view = it.args[0] as View
+        patcher.after<WidgetGuildProfileSheet>("onViewCreated", View::class.java, android.os.Bundle::class.java) { param ->
+            val rootView = param.args[0] as? View ?: return@after
+            val sheet = param.thisObject as? WidgetGuildProfileSheet ?: return@after
             
-            val guildId = try {
-                val field = WidgetGuildProfileSheet::class.java.getDeclaredField("guildId")
-                field.isAccessible = true
-                field.getLong(this)
-            } catch (e: Exception) {
-                logger.error("Erro ao obter guildId", null)
-                StoreStream.getGuildSelected().selectedGuildId
-            }
-
-            val token = try {
-                RestAPI.AppHeadersProvider.INSTANCE.authToken
-            } catch (e: Exception) {
-                logger.error("Erro ao obter token", null)
-                ""
-            }
-
             try {
-                val root = view.parent as? ViewGroup ?: return@after
-                val container = root.getChildAt(0) as? LinearLayout ?: return@after
-                
-                val btnId = View.generateViewId()
-                if (container.findViewById<TextView>(btnId) != null) return@after
-                
-                val btn = TextView(view.context).apply {
-                    id = btnId
-                    text = "Clone Server"
-                    setTextColor(ColorCompat.getThemedColor(context, R.b.white))
-                    textSize = 14f
-                    setTypeface(null, Typeface.BOLD)
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(20, 32, 20, 32)
-                    
-                    val icon = ContextCompat.getDrawable(context, R.e.ic_copy_24dp)?.mutate()
-                    icon?.setTint(ColorCompat.getThemedColor(context, R.b.white))
-                    setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
-                    compoundDrawablePadding = 16
-                    
-                    background = GradientDrawable().apply {
-                        cornerRadius = 10f
-                        setColor(ColorCompat.getThemedColor(context, R.b.brand_500))
-                    }
-                    
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        setMargins(24, 10, 24, 10)
-                    }
-                    
-                    setOnClickListener {
-                        try {
-                            CloneDialog.show(Utils.appActivity, guildId.toString(), token)
-                        } catch (e: Exception) {
-                            logger.error("Erro ao abrir clone dialog", e)
-                            Utils.showToast("Erro ao abrir Clone Dialog", true)
-                        }
-                    }
+                val guild: ModelGuild? = sheet.javaClass.getDeclaredField("guild").let { f ->
+                    f.isAccessible = true
+                    f.get(sheet) as? ModelGuild
                 }
-
-                container.addView(btn, container.childCount)
+                
+                guild?.let { g ->
+                    addCloneButton(rootView.context, rootView, g.id.toString())
+                }
             } catch (e: Exception) {
-                logger.error("Erro ao adicionar botao no perfil", null)
+                logger.error("Erro ao adicionar botão:", e)
             }
         }
     }
 
-    private fun clearNotifications(ctx: Context) {
+    @SuppressLint("SetTextI18n")
+    private fun addCloneButton(context: Context, rootView: View, guildId: String) {
         try {
-            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val parent = rootView.findViewById<LinearLayout>(
+                Utils.getResId("guild_profile_sheet_actions_container", "id")
+            ) ?: return
+
+            val button = TextView(context).apply {
+                text = "📋 Clone Server"
+                setTextColor(Color.parseColor("#FFFFFF"))
+                textSize = 14f
+                gravity = android.view.Gravity.CENTER
+                setPadding(24, 18, 24, 18)
+                
+                background = GradientDrawable().apply {
+                    cornerRadius = 10f
+                    setColor(Color.parseColor("#5865F2"))
+                }
+                
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(16, 8, 16, 8)
+                }
+                
+                setOnClickListener {
+                    CloneDialog.show(context, guildId, "")
+                }
+            }
+
+            parent.addView(button)
+        } catch (e: Exception) {
+            logger.error("Erro ao adicionar botão clone:", e)
+        }
+    }
+
+    private fun clearNotifications(context: Context) {
+        try {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.cancel(12345)
         } catch (e: Exception) {
-            logger.error("Erro ao limpar notificações", null)
+            logger.error("Erro ao limpar notificações:", e)
         }
     }
 
-    private fun checkPendingProgress(ctx: Context) {
-        Utils.threadPool.execute {
-            try {
-                val savedState = ProgressStateManager.loadProgress(ctx) ?: return@execute
-                if (savedState.isComplete) {
-                    ProgressStateManager.clearProgress(ctx)
-                    return@execute
-                }
+    @SuppressLint("SetTextI18n")
+    private fun checkPendingProgress(context: Context) {
+        val pendingState = ProgressStateManager.loadProgress(context) ?: return
+        
+        if (pendingState.isComplete) {
+            ProgressStateManager.clearProgress(context)
+            return
+        }
+
+        Utils.mainThread.post {
+            val messageText = buildString {
+                append("Você tem uma clonagem em andamento:\n\n")
+                append("Servidor: ${pendingState.serverName}\n")
+                append("Origem: ${pendingState.sourceGuildId}\n")
                 
-                Utils.mainThread.post {
-                    try {
-                        android.app.AlertDialog.Builder(Utils.appActivity).apply {
-                            setTitle("SvClone - Sessão Anterior")
-                            setMessage(
-                                "Encontramos uma clonagem incompleta do servidor " +
-                                "\"${savedState.serverName.ifEmpty { savedState.sourceGuildId }}\". " +
-                                "Deseja continuar de onde parou?"
-                            )
-                            setPositiveButton("Continuar") { _, _ ->
-                                try {
-                                    CloneDialog.showWithProgress(Utils.appActivity, savedState)
-                                } catch (e: Exception) {
-                                    logger.error("Erro ao retomar clonagem", e)
-                                    Utils.showToast("Erro ao retomar", true)
-                                }
-                            }
-                            setNegativeButton("Descartar") { _, _ ->
-                                ProgressStateManager.clearProgress(ctx)
-                            }
-                            setCancelable(true)
-                            
-                            create()
-                        }.show()
-                    } catch (e: Exception) {
-                        logger.error("Erro ao mostrar dialogo de retomada", null)
-                    }
+                val completed = mutableListOf<String>()
+                if (pendingState.settingsCloned) completed.add("Settings")
+                if (pendingState.iconCloned) completed.add("Icon")
+                if (pendingState.bannerCloned) completed.add("Banner")
+                if (pendingState.rolesCloned) completed.add("Roles")
+                if (pendingState.channelsCloned) completed.add("Channels")
+                if (pendingState.emojisCloned) completed.add("Emojis")
+                if (pendingState.stickersCloned) completed.add("Stickers")
+                if (pendingState.soundsCloned) completed.add("Sounds")
+                if (pendingState.messagesCloned) completed.add("Messages")
+                if (pendingState.bansCloned) completed.add("Bans")
+                if (pendingState.eventsCloned) completed.add("Events")
+                if (pendingState.autoModCloned) completed.add("AutoMod")
+                if (pendingState.onboardingCloned) completed.add("Onboarding")
+                if (pendingState.welcomeCloned) completed.add("Welcome")
+                
+                if (completed.isNotEmpty()) {
+                    append("\nConcluído: ${completed.joinToString(", ")}")
                 }
-            } catch (e: Exception) {
-                logger.error("Erro ao verificar progresso pendente", null)
             }
+
+            AlertDialog.Builder(context)
+                .setTitle("Continuar Clonagem?")
+                .setMessage(messageText)
+                .setPositiveButton("Continuar") { _, _ ->
+                    CloneDialog.showWithProgress(context, pendingState)
+                }
+                .setNegativeButton("Cancelar") { _, _ ->
+                    ProgressStateManager.clearProgress(context)
+                }
+                .setCancelable(false)
+                .show()
         }
     }
 
-    override fun stop(ctx: Context) {
-        patcher.unpatchAll()
+    override fun stop(context: Context) {
         commands.unregisterAll()
-        clearNotifications(ctx)
+        patcher.unpatchAll()
+        clearNotifications(context)
     }
 }

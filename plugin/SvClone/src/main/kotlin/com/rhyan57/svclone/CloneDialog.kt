@@ -3,16 +3,14 @@ package com.rhyan57.svclone
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.widget.*
-import androidx.core.content.ContextCompat
 import com.aliucord.Utils
-import com.discord.utilities.color.ColorCompat
-import com.lytefast.flexinput.R
 
 object CloneDialog {
 
@@ -34,13 +32,13 @@ object CloneDialog {
         val container = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 24, 24, 24)
-            setBackgroundColor(ColorCompat.getThemedColor(ctx, R.b.primary_dark_800))
+            setBackgroundColor(Color.parseColor("#2B2D31"))
         }
         root.addView(container)
 
         fun label(text: String): TextView = TextView(ctx).apply {
             this.text = text
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_230))
+            setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 10f
             setTypeface(null, Typeface.BOLD)
             letterSpacing = 0.08f
@@ -51,14 +49,14 @@ object CloneDialog {
             this.hint = hint
             setText(value)
             inputType = if (password) InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT else InputType.TYPE_CLASS_TEXT
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_100))
-            setHintTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_500))
+            setTextColor(Color.parseColor("#DBDEE1"))
+            setHintTextColor(Color.parseColor("#4E5058"))
             setPadding(16, 14, 16, 14)
             textSize = 13f
             
             background = GradientDrawable().apply {
                 cornerRadius = 8f
-                setColor(ColorCompat.getThemedColor(ctx, R.b.primary_dark_700))
+                setColor(Color.parseColor("#1E1F22"))
             }
             
             layoutParams = LinearLayout.LayoutParams(
@@ -67,16 +65,11 @@ object CloneDialog {
             ).apply { setMargins(0, 0, 0, 10) }
         }
 
-        fun checkBox(text: String, iconRes: Int, checked: Boolean = true): CheckBox = CheckBox(ctx).apply {
+        fun checkBox(text: String, checked: Boolean = true): CheckBox = CheckBox(ctx).apply {
             this.text = text
             isChecked = checked
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_200))
+            setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 12f
-            
-            val icon = ContextCompat.getDrawable(ctx, iconRes)?.mutate()
-            icon?.setTint(ColorCompat.getThemedColor(ctx, R.b.primary_300))
-            setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
-            compoundDrawablePadding = 12
             
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -87,30 +80,25 @@ object CloneDialog {
         fun divider(): View = View(ctx).apply {
             background = GradientDrawable().apply {
                 cornerRadius = 1f
-                setColor(ColorCompat.getThemedColor(ctx, R.b.primary_dark_600))
+                setColor(Color.parseColor("#3B3D44"))
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, 1
             ).apply { setMargins(0, 14, 0, 14) }
         }
 
-        fun sectionTitle(text: String, iconRes: Int): TextView = TextView(ctx).apply {
+        fun sectionTitle(text: String): TextView = TextView(ctx).apply {
             this.text = text
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.brand_500))
+            setTextColor(Color.parseColor("#5865F2"))
             textSize = 11f
             setTypeface(null, Typeface.BOLD)
             letterSpacing = 0.1f
             setPadding(0, 6, 0, 10)
-            
-            val icon = ContextCompat.getDrawable(ctx, iconRes)?.mutate()
-            icon?.setTint(ColorCompat.getThemedColor(ctx, R.b.brand_500))
-            setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
-            compoundDrawablePadding = 10
         }
 
         val titleView = TextView(ctx).apply {
             text = "Clone Server"
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.white))
+            setTextColor(Color.parseColor("#FFFFFF"))
             textSize = 19f
             setTypeface(null, Typeface.BOLD)
             gravity = Gravity.CENTER
@@ -123,33 +111,33 @@ object CloneDialog {
 
         container.addView(titleView)
         container.addView(divider())
-        container.addView(sectionTitle("AUTENTICAÇÃO", R.e.ic_account_circle_24dp))
+        container.addView(sectionTitle("AUTENTICAÇÃO"))
         container.addView(label("TOKEN DISCORD"))
         container.addView(tokenField)
         container.addView(divider())
-        container.addView(sectionTitle("SERVIDORES", R.e.ic_sidebar_server_24dp))
+        container.addView(sectionTitle("SERVIDORES"))
         container.addView(label("SERVIDOR DE ORIGEM"))
         container.addView(sourceField)
         container.addView(label("SERVIDOR DESTINO"))
         container.addView(targetField)
         container.addView(divider())
-        container.addView(sectionTitle("O QUE CLONAR", R.e.ic_check_circle_24dp))
+        container.addView(sectionTitle("O QUE CLONAR"))
 
-        val cbSettings  = checkBox("Configurações gerais", R.e.ic_settings_24dp, resumeState?.cloneSettings ?: true)
-        val cbIcon      = checkBox("Ícone do servidor", R.e.ic_image_24dp, resumeState?.cloneIcon ?: true)
-        val cbBanner    = checkBox("Banner do servidor", R.e.ic_image_24dp, resumeState?.cloneBanner ?: true)
-        val cbRoles     = checkBox("Cargos", R.e.ic_group_24dp, resumeState?.cloneRoles ?: true)
-        val cbChannels  = checkBox("Canais e categorias", R.e.ic_channel_text, resumeState?.cloneChannels ?: true)
-        val cbEmojis    = checkBox("Emojis personalizados", R.e.ic_emoji_picker_tab_guild, resumeState?.cloneEmojis ?: true)
-        val cbStickers  = checkBox("Stickers", R.e.ic_sticker_24dp, resumeState?.cloneStickers ?: true)
-        val cbSounds    = checkBox("Sons de Soundboard", R.e.ic_soundboard, resumeState?.cloneSounds ?: true)
-        val cbMessages  = checkBox("Mensagens", R.e.ic_message_24dp, resumeState?.cloneMessages ?: false)
-        val cbBans      = checkBox("Banimentos", R.e.ic_ban_24dp, resumeState?.cloneBans ?: false)
-        val cbEvents    = checkBox("Eventos", R.e.ic_calendar_24dp, resumeState?.cloneEvents ?: false)
-        val cbAutoMod   = checkBox("AutoMod", R.e.ic_shield_24dp, resumeState?.cloneAutoMod ?: false)
-        val cbOnboarding = checkBox("Onboarding", R.e.ic_wave_24dp, resumeState?.cloneOnboarding ?: false)
-        val cbWelcome   = checkBox("Welcome Screen", R.e.ic_star_24dp, resumeState?.cloneWelcome ?: false)
-        val cbSaveMidia = checkBox("Salvar mídia em ZIP", R.e.ic_download_24dp, resumeState?.saveMidia ?: false)
+        val cbSettings  = checkBox("Configurações gerais", resumeState?.cloneSettings ?: true)
+        val cbIcon      = checkBox("Ícone do servidor", resumeState?.cloneIcon ?: true)
+        val cbBanner    = checkBox("Banner do servidor", resumeState?.cloneBanner ?: true)
+        val cbRoles     = checkBox("Cargos", resumeState?.cloneRoles ?: true)
+        val cbChannels  = checkBox("Canais e categorias", resumeState?.cloneChannels ?: true)
+        val cbEmojis    = checkBox("Emojis personalizados", resumeState?.cloneEmojis ?: true)
+        val cbStickers  = checkBox("Stickers", resumeState?.cloneStickers ?: true)
+        val cbSounds    = checkBox("Sons de Soundboard", resumeState?.cloneSounds ?: true)
+        val cbMessages  = checkBox("Mensagens", resumeState?.cloneMessages ?: false)
+        val cbBans      = checkBox("Banimentos", resumeState?.cloneBans ?: false)
+        val cbEvents    = checkBox("Eventos", resumeState?.cloneEvents ?: false)
+        val cbAutoMod   = checkBox("AutoMod", resumeState?.cloneAutoMod ?: false)
+        val cbOnboarding = checkBox("Onboarding", resumeState?.cloneOnboarding ?: false)
+        val cbWelcome   = checkBox("Welcome Screen", resumeState?.cloneWelcome ?: false)
+        val cbSaveMidia = checkBox("Salvar mídia em ZIP", resumeState?.saveMidia ?: false)
 
         container.addView(cbSettings)
         container.addView(cbIcon)
@@ -175,7 +163,7 @@ object CloneDialog {
             
             background = GradientDrawable().apply {
                 cornerRadius = 10f
-                setColor(ColorCompat.getThemedColor(ctx, R.b.primary_dark_700))
+                setColor(Color.parseColor("#1E1F22"))
             }
             
             layoutParams = LinearLayout.LayoutParams(
@@ -194,7 +182,7 @@ object CloneDialog {
 
         val progressTitle = TextView(ctx).apply {
             text = "PROGRESSO"
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.brand_500))
+            setTextColor(Color.parseColor("#5865F2"))
             textSize = 10f
             setTypeface(null, Typeface.BOLD)
             letterSpacing = 0.1f
@@ -207,7 +195,7 @@ object CloneDialog {
 
         val toggleButton = TextView(ctx).apply {
             text = "▼"
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.brand_500))
+            setTextColor(Color.parseColor("#5865F2"))
             textSize = 12f
             gravity = Gravity.CENTER
             setPadding(12, 0, 12, 0)
@@ -223,7 +211,7 @@ object CloneDialog {
 
         val progressLabel = TextView(ctx).apply {
             text = "0%"
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_400))
+            setTextColor(Color.parseColor("#80848E"))
             textSize = 11f
             gravity = Gravity.CENTER
             setPadding(0, 6, 0, 0)
@@ -238,13 +226,13 @@ object CloneDialog {
 
         val logView = TextView(ctx).apply {
             text = ""
-            setTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_200))
+            setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 10f
             setPadding(10, 10, 10, 10)
             
             background = GradientDrawable().apply {
                 cornerRadius = 6f
-                setColor(ColorCompat.getThemedColor(ctx, R.b.primary_dark_800))
+                setColor(Color.parseColor("#0D0E10"))
             }
         }
 
@@ -279,8 +267,8 @@ object CloneDialog {
             val positiveBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
             val negativeBtn = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
             
-            positiveBtn.setTextColor(ColorCompat.getThemedColor(ctx, R.b.brand_500))
-            negativeBtn.setTextColor(ColorCompat.getThemedColor(ctx, R.b.primary_300))
+            positiveBtn.setTextColor(Color.parseColor("#5865F2"))
+            negativeBtn.setTextColor(Color.parseColor("#B5BAC1"))
 
             positiveBtn.setOnClickListener {
                 val token = tokenField.text.toString().trim()
