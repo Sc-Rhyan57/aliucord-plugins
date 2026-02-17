@@ -7,41 +7,56 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.Editable
 import android.text.InputType
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
+import androidx.core.widget.NestedScrollView
 import com.aliucord.Utils
+import com.aliucord.api.SettingsAPI
+import com.discord.stores.StoreStream
+import com.discord.utilities.icon.IconUtils
+import com.discord.utilities.images.MGImages
+import com.facebook.drawee.view.SimpleDraweeView
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object CloneDialog {
 
-    fun show(ctx: Context, sourceGuildId: String, defaultToken: String) {
+    fun show(ctx: Context, sourceGuildId: String, defaultToken: String, settings: SettingsAPI) {
         Utils.mainThread.post {
             val activity = if (ctx is Activity) ctx else Utils.appActivity
             if (activity != null) {
-                buildAndShow(activity, sourceGuildId, defaultToken, null)
+                buildAndShow(activity, sourceGuildId, defaultToken, null, settings)
             }
         }
     }
 
-    fun showWithProgress(ctx: Context, state: ProgressState) {
+    fun showWithProgress(ctx: Context, state: ProgressState, settings: SettingsAPI) {
         Utils.mainThread.post {
             val activity = if (ctx is Activity) ctx else Utils.appActivity
             if (activity != null) {
-                buildAndShow(activity, state.sourceGuildId, state.token, state)
+                buildAndShow(activity, state.sourceGuildId, state.token, state, settings)
             }
         }
     }
 
     @SuppressLint("SetTextI18n")
-    private fun buildAndShow(ctx: Context, sourceGuildId: String, defaultToken: String, resumeState: ProgressState?) {
-        val root = ScrollView(ctx)
+    private fun buildAndShow(ctx: Context, sourceGuildId: String, defaultToken: String, resumeState: ProgressState?, settings: SettingsAPI) {
+        val rootScroll = NestedScrollView(ctx).apply {
+            isFillViewport = true
+        }
         val container = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 24, 24, 24)
             setBackgroundColor(Color.parseColor("#2B2D31"))
         }
-        root.addView(container)
+        rootScroll.addView(container)
 
         fun label(text: String): TextView = TextView(ctx).apply {
             this.text = text
@@ -94,17 +109,47 @@ object CloneDialog {
             ).apply { setMargins(0, 14, 0, 14) }
         }
 
-        fun sectionTitle(text: String): TextView = TextView(ctx).apply {
-            this.text = text
-            setTextColor(Color.parseColor("#5865F2"))
-            textSize = 11f
-            setTypeface(null, Typeface.BOLD)
-            letterSpacing = 0.1f
-            setPadding(0, 6, 0, 10)
+        fun sectionTitle(text: String, expandable: Boolean = false): LinearLayout {
+            val sectionLayout = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setPadding(0, 6, 0, 10)
+            }
+            
+            val titleText = TextView(ctx).apply {
+                this.text = text
+                setTextColor(Color.parseColor("#5865F2"))
+                textSize = 11f
+                setTypeface(null, Typeface.BOLD)
+                letterSpacing = 0.1f
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            }
+            
+            sectionLayout.addView(titleText)
+            
+            if (expandable) {
+                val arrow = TextView(ctx).apply {
+                    text = "▼"
+                    setTextColor(Color.parseColor("#5865F2"))
+                    textSize = 12f
+                    gravity = Gravity.CENTER
+                    setPadding(12, 0, 12, 0)
+                }
+                sectionLayout.addView(arrow)
+            }
+            
+            return sectionLayout
         }
 
         val titleView = TextView(ctx).apply {
-            text = "Clone Server"
+            text = "🔄 Clone Server"
             setTextColor(Color.parseColor("#FFFFFF"))
             textSize = 19f
             setTypeface(null, Typeface.BOLD)
@@ -114,53 +159,356 @@ object CloneDialog {
 
         val tokenField = editText("Token Discord", defaultToken, password = true)
         val sourceField = editText("ID do servidor de origem", resumeState?.sourceGuildId ?: sourceGuildId)
-        val targetField = editText("ID do servidor destino")
+        val targetField = editText("ID do servidor destino (deixe vazio para criar novo)", resumeState?.targetGuildId ?: "")
+
+        val sourcePreview = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            visibility = View.GONE
+            setPadding(12, 12, 12, 12)
+            background = GradientDrawable().apply {
+                cornerRadius = 8f
+                setColor(Color.parseColor("#1E1F22"))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 10) }
+        }
+        
+        val sourceIcon = SimpleDraweeView(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(48, 48).apply {
+                setMargins(0, 0, 12, 0)
+            }
+        }
+        
+        val sourceInfo = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        
+        val sourceName = TextView(ctx).apply {
+            text = ""
+            setTextColor(Color.parseColor("#FFFFFF"))
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+        }
+        
+        val sourceMemberCount = TextView(ctx).apply {
+            text = ""
+            setTextColor(Color.parseColor("#B5BAC1"))
+            textSize = 11f
+        }
+        
+        sourceInfo.addView(sourceName)
+        sourceInfo.addView(sourceMemberCount)
+        sourcePreview.addView(sourceIcon)
+        sourcePreview.addView(sourceInfo)
+
+        val targetPreview = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            visibility = View.GONE
+            setPadding(12, 12, 12, 12)
+            background = GradientDrawable().apply {
+                cornerRadius = 8f
+                setColor(Color.parseColor("#1E1F22"))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 10) }
+        }
+        
+        val targetIcon = SimpleDraweeView(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(48, 48).apply {
+                setMargins(0, 0, 12, 0)
+            }
+        }
+        
+        val targetInfo = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+        
+        val targetName = TextView(ctx).apply {
+            text = ""
+            setTextColor(Color.parseColor("#FFFFFF"))
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+        }
+        
+        val targetMemberCount = TextView(ctx).apply {
+            text = ""
+            setTextColor(Color.parseColor("#B5BAC1"))
+            textSize = 11f
+        }
+        
+        targetInfo.addView(targetName)
+        targetInfo.addView(targetMemberCount)
+        targetPreview.addView(targetIcon)
+        targetPreview.addView(targetInfo)
+
+        fun updateServerPreview(guildId: String, isSource: Boolean) {
+            if (guildId.isEmpty()) {
+                if (isSource) sourcePreview.visibility = View.GONE
+                else targetPreview.visibility = View.GONE
+                return
+            }
+            
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val guild = StoreStream.getGuilds().getGuild(guildId.toLong())
+                    if (guild != null) {
+                        withContext(Dispatchers.Main) {
+                            if (isSource) {
+                                sourceName.text = guild.name
+                                sourceMemberCount.text = "${guild.memberCount} membros"
+                                val iconUrl = IconUtils.getForGuild(guild)
+                                if (iconUrl != null) {
+                                    MGImages.setImage(sourceIcon, iconUrl)
+                                }
+                                sourcePreview.visibility = View.VISIBLE
+                            } else {
+                                targetName.text = guild.name
+                                targetMemberCount.text = "${guild.memberCount} membros"
+                                val iconUrl = IconUtils.getForGuild(guild)
+                                if (iconUrl != null) {
+                                    MGImages.setImage(targetIcon, iconUrl)
+                                }
+                                targetPreview.visibility = View.VISIBLE
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        if (isSource) sourcePreview.visibility = View.GONE
+                        else targetPreview.visibility = View.GONE
+                    }
+                }
+            }
+        }
+
+        sourceField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateServerPreview(s.toString().trim(), true)
+            }
+        })
+
+        targetField.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                updateServerPreview(s.toString().trim(), false)
+            }
+        })
 
         container.addView(titleView)
         container.addView(divider())
-        container.addView(sectionTitle("AUTENTICAÇÃO"))
+        container.addView(sectionTitle("🔐 AUTENTICAÇÃO", false))
         container.addView(label("TOKEN DISCORD"))
         container.addView(tokenField)
         container.addView(divider())
-        container.addView(sectionTitle("SERVIDORES"))
+        container.addView(sectionTitle("📊 SERVIDORES", false))
         container.addView(label("SERVIDOR DE ORIGEM"))
         container.addView(sourceField)
+        container.addView(sourcePreview)
         container.addView(label("SERVIDOR DESTINO"))
         container.addView(targetField)
+        container.addView(targetPreview)
         container.addView(divider())
-        container.addView(sectionTitle("O QUE CLONAR"))
 
+        val basicSection = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val basicTitle = sectionTitle("⚙️ BÁSICO", true)
+        var basicExpanded = true
+        
         val cbSettings  = checkBox("Configurações gerais", resumeState?.cloneSettings ?: true)
         val cbIcon      = checkBox("Ícone do servidor", resumeState?.cloneIcon ?: true)
         val cbBanner    = checkBox("Banner do servidor", resumeState?.cloneBanner ?: true)
         val cbRoles     = checkBox("Cargos", resumeState?.cloneRoles ?: true)
         val cbChannels  = checkBox("Canais e categorias", resumeState?.cloneChannels ?: true)
+        
+        basicSection.addView(cbSettings)
+        basicSection.addView(cbIcon)
+        basicSection.addView(cbBanner)
+        basicSection.addView(cbRoles)
+        basicSection.addView(cbChannels)
+        
+        basicTitle.setOnClickListener {
+            basicExpanded = !basicExpanded
+            basicSection.visibility = if (basicExpanded) View.VISIBLE else View.GONE
+            (basicTitle.getChildAt(1) as? TextView)?.text = if (basicExpanded) "▼" else "▶"
+        }
+        
+        container.addView(basicTitle)
+        container.addView(basicSection)
+        container.addView(divider())
+
+        val mediaSection = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val mediaTitle = sectionTitle("🎨 MÍDIA", true)
+        var mediaExpanded = true
+        
         val cbEmojis    = checkBox("Emojis personalizados", resumeState?.cloneEmojis ?: true)
         val cbStickers  = checkBox("Stickers", resumeState?.cloneStickers ?: true)
         val cbSounds    = checkBox("Sons de Soundboard", resumeState?.cloneSounds ?: true)
-        val cbMessages  = checkBox("Mensagens", resumeState?.cloneMessages ?: false)
+        val cbSaveMidia = checkBox("Salvar mídia em ZIP", resumeState?.saveMidia ?: false)
+        
+        mediaSection.addView(cbEmojis)
+        mediaSection.addView(cbStickers)
+        mediaSection.addView(cbSounds)
+        mediaSection.addView(cbSaveMidia)
+        
+        mediaTitle.setOnClickListener {
+            mediaExpanded = !mediaExpanded
+            mediaSection.visibility = if (mediaExpanded) View.VISIBLE else View.GONE
+            (mediaTitle.getChildAt(1) as? TextView)?.text = if (mediaExpanded) "▼" else "▶"
+        }
+        
+        container.addView(mediaTitle)
+        container.addView(mediaSection)
+        container.addView(divider())
+
+        val messagesSection = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val messagesTitle = sectionTitle("💬 MENSAGENS", true)
+        var messagesExpanded = false
+        messagesSection.visibility = View.GONE
+        
+        val cbMessages  = checkBox("Clonar mensagens", resumeState?.cloneMessages ?: false)
+        val cbSystemMessages = checkBox("Incluir mensagens do sistema", resumeState?.cloneSystemMessages ?: false)
+        val cbReactions = checkBox("Clonar reações", resumeState?.cloneReactions ?: true)
+        val cbConvertMentions = checkBox("Converter menções (@cargos)", resumeState?.convertMentions ?: true)
+        val cbConvertEmojis = checkBox("Converter emojis customizados (requer Nitro)", resumeState?.convertCustomEmojis ?: false)
+        val cbConvertLinks = checkBox("Converter links de canais/mensagens", resumeState?.convertLinks ?: false)
+        val cbForumThreads = checkBox("Clonar threads de fóruns", resumeState?.cloneForumThreads ?: false)
+        
+        val messageLimitLayout = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 8, 0, 8) }
+        }
+        
+        val messageLimitLabel = TextView(ctx).apply {
+            text = "Limite de mensagens: "
+            setTextColor(Color.parseColor("#B5BAC1"))
+            textSize = 12f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        
+        val messageLimitField = EditText(ctx).apply {
+            setText((resumeState?.messageLimit ?: 100).toString())
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setTextColor(Color.parseColor("#DBDEE1"))
+            setPadding(12, 8, 12, 8)
+            textSize = 12f
+            background = GradientDrawable().apply {
+                cornerRadius = 6f
+                setColor(Color.parseColor("#1E1F22"))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply { setMargins(8, 0, 0, 0) }
+        }
+        
+        val messageLimitHint = TextView(ctx).apply {
+            text = "(-1 = ilimitado)"
+            setTextColor(Color.parseColor("#80848E"))
+            textSize = 10f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(8, 0, 0, 0) }
+        }
+        
+        messageLimitLayout.addView(messageLimitLabel)
+        messageLimitLayout.addView(messageLimitField)
+        messageLimitLayout.addView(messageLimitHint)
+        
+        messagesSection.addView(cbMessages)
+        messagesSection.addView(messageLimitLayout)
+        messagesSection.addView(cbSystemMessages)
+        messagesSection.addView(cbReactions)
+        messagesSection.addView(cbConvertMentions)
+        messagesSection.addView(cbConvertEmojis)
+        messagesSection.addView(cbConvertLinks)
+        messagesSection.addView(cbForumThreads)
+        
+        messagesTitle.setOnClickListener {
+            messagesExpanded = !messagesExpanded
+            messagesSection.visibility = if (messagesExpanded) View.VISIBLE else View.GONE
+            (messagesTitle.getChildAt(1) as? TextView)?.text = if (messagesExpanded) "▼" else "▶"
+        }
+        
+        container.addView(messagesTitle)
+        container.addView(messagesSection)
+        container.addView(divider())
+
+        val moderationSection = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val moderationTitle = sectionTitle("🛡️ MODERAÇÃO", true)
+        var moderationExpanded = false
+        moderationSection.visibility = View.GONE
+        
         val cbBans      = checkBox("Banimentos", resumeState?.cloneBans ?: false)
-        val cbEvents    = checkBox("Eventos", resumeState?.cloneEvents ?: false)
         val cbAutoMod   = checkBox("AutoMod", resumeState?.cloneAutoMod ?: false)
+        
+        moderationSection.addView(cbBans)
+        moderationSection.addView(cbAutoMod)
+        
+        moderationTitle.setOnClickListener {
+            moderationExpanded = !moderationExpanded
+            moderationSection.visibility = if (moderationExpanded) View.VISIBLE else View.GONE
+            (moderationTitle.getChildAt(1) as? TextView)?.text = if (moderationExpanded) "▼" else "▶"
+        }
+        
+        container.addView(moderationTitle)
+        container.addView(moderationSection)
+        container.addView(divider())
+
+        val communitySection = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val communityTitle = sectionTitle("🌟 COMUNIDADE", true)
+        var communityExpanded = false
+        communitySection.visibility = View.GONE
+        
+        val cbEvents    = checkBox("Eventos", resumeState?.cloneEvents ?: false)
         val cbOnboarding = checkBox("Onboarding", resumeState?.cloneOnboarding ?: false)
         val cbWelcome   = checkBox("Welcome Screen", resumeState?.cloneWelcome ?: false)
-        val cbSaveMidia = checkBox("Salvar mídia em ZIP", resumeState?.saveMidia ?: false)
-
-        container.addView(cbSettings)
-        container.addView(cbIcon)
-        container.addView(cbBanner)
-        container.addView(cbRoles)
-        container.addView(cbChannels)
-        container.addView(cbEmojis)
-        container.addView(cbStickers)
-        container.addView(cbSounds)
-        container.addView(cbMessages)
-        container.addView(cbBans)
-        container.addView(cbEvents)
-        container.addView(cbAutoMod)
-        container.addView(cbOnboarding)
-        container.addView(cbWelcome)
-        container.addView(cbSaveMidia)
+        
+        communitySection.addView(cbEvents)
+        communitySection.addView(cbOnboarding)
+        communitySection.addView(cbWelcome)
+        
+        communityTitle.setOnClickListener {
+            communityExpanded = !communityExpanded
+            communitySection.visibility = if (communityExpanded) View.VISIBLE else View.GONE
+            (communityTitle.getChildAt(1) as? TextView)?.text = if (communityExpanded) "▼" else "▶"
+        }
+        
+        container.addView(communityTitle)
+        container.addView(communitySection)
         container.addView(divider())
 
         val progressContainer = LinearLayout(ctx).apply {
@@ -188,7 +536,7 @@ object CloneDialog {
         }
 
         val progressTitle = TextView(ctx).apply {
-            text = "PROGRESSO"
+            text = "📊 PROGRESSO"
             setTextColor(Color.parseColor("#5865F2"))
             textSize = 10f
             setTypeface(null, Typeface.BOLD)
@@ -259,23 +607,44 @@ object CloneDialog {
         
         container.addView(progressContainer)
 
-        resumeState?.let { targetField.setText(it.targetGuildId) }
+        if (!sourceGuildId.isEmpty()) {
+            updateServerPreview(sourceGuildId, true)
+        }
+        resumeState?.let { 
+            if (!it.targetGuildId.isEmpty()) {
+                updateServerPreview(it.targetGuildId, false)
+            }
+        }
 
         val dialog = AlertDialog.Builder(ctx)
-            .setView(root)
+            .setView(rootScroll)
             .setCancelable(true)
             .create()
 
-        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "Iniciar") { _, _ -> }
-        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Cancelar") { d, _ -> d.dismiss() }
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "▶️ Iniciar") { _, _ -> }
+        dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "➖ Minimizar") { _, _ -> }
+        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "❌ Fechar") { d, _ -> d.dismiss() }
 
         dialog.setOnShowListener {
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             val positiveBtn = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            val neutralBtn = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
             val negativeBtn = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
             
             positiveBtn.setTextColor(Color.parseColor("#5865F2"))
-            negativeBtn.setTextColor(Color.parseColor("#B5BAC1"))
+            neutralBtn.setTextColor(Color.parseColor("#F0B232"))
+            negativeBtn.setTextColor(Color.parseColor("#ED4245"))
+            
+            var isMinimized = false
+            neutralBtn.setOnClickListener {
+                isMinimized = !isMinimized
+                container.visibility = if (isMinimized) View.GONE else View.VISIBLE
+                neutralBtn.text = if (isMinimized) "➕ Maximizar" else "➖ Minimizar"
+                
+                val params = dialog.window?.attributes
+                params?.height = if (isMinimized) ViewGroup.LayoutParams.WRAP_CONTENT else (ctx.resources.displayMetrics.heightPixels * 0.9f).toInt()
+                dialog.window?.attributes = params
+            }
 
             positiveBtn.setOnClickListener {
                 val token = tokenField.text.toString().trim()
@@ -286,9 +655,16 @@ object CloneDialog {
                 if (srcId.isEmpty())  { Utils.showToast("ID de origem obrigatório!", true); return@setOnClickListener }
 
                 positiveBtn.isEnabled = false
-                positiveBtn.text = "Clonando..."
+                positiveBtn.text = "⏳ Clonando..."
+                neutralBtn.isEnabled = false
                 progressContainer.visibility = View.VISIBLE
                 logView.text = ""
+
+                val messageLimit = try {
+                    messageLimitField.text.toString().toInt()
+                } catch (e: Exception) {
+                    100
+                }
 
                 val state = ProgressState(
                     sourceGuildId   = srcId,
@@ -310,6 +686,13 @@ object CloneDialog {
                     cloneAutoMod    = cbAutoMod.isChecked,
                     cloneOnboarding = cbOnboarding.isChecked,
                     cloneWelcome    = cbWelcome.isChecked,
+                    messageLimit    = messageLimit,
+                    cloneSystemMessages = cbSystemMessages.isChecked,
+                    cloneReactions  = cbReactions.isChecked,
+                    convertMentions = cbConvertMentions.isChecked,
+                    convertCustomEmojis = cbConvertEmojis.isChecked,
+                    convertLinks    = cbConvertLinks.isChecked,
+                    cloneForumThreads = cbForumThreads.isChecked,
                     rolesCloned     = resumeState?.rolesCloned ?: false,
                     channelsCloned  = resumeState?.channelsCloned ?: false,
                     emojisCloned    = resumeState?.emojisCloned ?: false,
@@ -350,12 +733,13 @@ object CloneDialog {
                             progressLabel.text = if (success) "100%" else "Erro"
                             logView.text = "${logView.text}\n\n$msg"
                             positiveBtn.isEnabled = true
-                            positiveBtn.text = "Iniciar"
+                            positiveBtn.text = "▶️ Iniciar"
+                            neutralBtn.isEnabled = true
                             if (success) {
                                 ProgressStateManager.clearProgress(ctx)
-                                Utils.showToast("Servidor clonado!", false)
+                                Utils.showToast("✅ Servidor clonado com sucesso!", false)
                             } else {
-                                Utils.showToast("Erro na clonagem", true)
+                                Utils.showToast("❌ Erro na clonagem", true)
                             }
                         }
                     }
@@ -366,8 +750,8 @@ object CloneDialog {
         try {
             dialog.show()
             dialog.window?.setLayout(
-                (ctx.resources.displayMetrics.widthPixels * 0.90f).toInt(),
-                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                (ctx.resources.displayMetrics.widthPixels * 0.92f).toInt(),
+                (ctx.resources.displayMetrics.heightPixels * 0.9f).toInt()
             )
         } catch (e: Exception) {
             Utils.showToast("Erro ao exibir dialogo: ${e.message}", true)

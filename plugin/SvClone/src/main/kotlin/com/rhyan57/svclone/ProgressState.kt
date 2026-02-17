@@ -23,6 +23,13 @@ data class ProgressState(
     val cloneAutoMod: Boolean = false,
     val cloneOnboarding: Boolean = false,
     val cloneWelcome: Boolean = false,
+    val messageLimit: Int = 100,
+    val cloneSystemMessages: Boolean = false,
+    val cloneReactions: Boolean = true,
+    val convertMentions: Boolean = true,
+    val convertCustomEmojis: Boolean = false,
+    val convertLinks: Boolean = false,
+    val cloneForumThreads: Boolean = false,
     val rolesCloned: Boolean = false,
     val channelsCloned: Boolean = false,
     val emojisCloned: Boolean = false,
@@ -66,6 +73,13 @@ object ProgressStateManager {
             put("cloneAutoMod", state.cloneAutoMod)
             put("cloneOnboarding", state.cloneOnboarding)
             put("cloneWelcome", state.cloneWelcome)
+            put("messageLimit", state.messageLimit)
+            put("cloneSystemMessages", state.cloneSystemMessages)
+            put("cloneReactions", state.cloneReactions)
+            put("convertMentions", state.convertMentions)
+            put("convertCustomEmojis", state.convertCustomEmojis)
+            put("convertLinks", state.convertLinks)
+            put("cloneForumThreads", state.cloneForumThreads)
             put("rolesCloned", state.rolesCloned)
             put("channelsCloned", state.channelsCloned)
             put("emojisCloned", state.emojisCloned)
@@ -114,6 +128,13 @@ object ProgressStateManager {
                 cloneAutoMod = j.optBoolean("cloneAutoMod", false),
                 cloneOnboarding = j.optBoolean("cloneOnboarding", false),
                 cloneWelcome = j.optBoolean("cloneWelcome", false),
+                messageLimit = j.optInt("messageLimit", 100),
+                cloneSystemMessages = j.optBoolean("cloneSystemMessages", false),
+                cloneReactions = j.optBoolean("cloneReactions", true),
+                convertMentions = j.optBoolean("convertMentions", true),
+                convertCustomEmojis = j.optBoolean("convertCustomEmojis", false),
+                convertLinks = j.optBoolean("convertLinks", false),
+                cloneForumThreads = j.optBoolean("cloneForumThreads", false),
                 rolesCloned = j.optBoolean("rolesCloned", false),
                 channelsCloned = j.optBoolean("channelsCloned", false),
                 emojisCloned = j.optBoolean("emojisCloned", false),
