@@ -1,5 +1,5 @@
 version = "1.0.1"
-description = "Clona servidores Discord. Baseado em https://bettercloner.vercel.app"
+description = "Clona servidores Discord. | Baseado em https://bettercloner.vercel.app"
 
 aliucord {
     author("Rhyan57", 896604349311115304L)
