@@ -14,7 +14,7 @@ import com.aliucord.annotations.AliucordPlugin
 import com.aliucord.api.CommandsAPI
 import com.aliucord.entities.Plugin
 import com.aliucord.patcher.after
-import com.discord.models.domain.ModelGuild
+import com.discord.models.guild.Guild
 import com.discord.widgets.guilds.profile.WidgetGuildProfileSheet
 
 @AliucordPlugin
@@ -28,12 +28,12 @@ class SvClone : Plugin() {
             "clone-server",
             "Clonar servidor do Discord",
             listOf(
-                CommandsAPI.requiredOption("server_id", "ID do servidor", CommandsAPI.OptionType.STRING),
-                CommandsAPI.option("token", "Token Discord (opcional)", CommandsAPI.OptionType.STRING)
+                Utils.createCommandOption(CommandsAPI.OptionType.STRING, "server_id", "ID do servidor", null, true),
+                Utils.createCommandOption(CommandsAPI.OptionType.STRING, "token", "Token Discord (opcional)", null, false)
             )
         ) { ctx ->
             val serverId = ctx.getRequiredString("server_id")
-            val token = ctx.getStringOrNull("token") ?: ""
+            val token = ctx.getStringOrDefault("token", "")
             Utils.mainThread.post {
                 CloneDialog.show(ctx.context, serverId, token)
             }
@@ -45,13 +45,13 @@ class SvClone : Plugin() {
             val sheet = param.thisObject as? WidgetGuildProfileSheet ?: return@after
             
             try {
-                val guild: ModelGuild? = sheet.javaClass.getDeclaredField("guild").let { f ->
+                val guild: Guild? = sheet.javaClass.getDeclaredField("guild").let { f ->
                     f.isAccessible = true
-                    f.get(sheet) as? ModelGuild
+                    f.get(sheet) as? Guild
                 }
                 
                 guild?.let { g ->
-                    addCloneButton(rootView.context, rootView, g.id.toString())
+                    addCloneButton(rootView.context, rootView, g.getId().toString())
                 }
             } catch (e: Exception) {
                 logger.error("Erro ao adicionar botão:", e)
