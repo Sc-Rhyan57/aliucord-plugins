@@ -32,7 +32,7 @@ class SvClone : Plugin() {
                 Utils.createCommandOption(
                     ApplicationCommandType.STRING,
                     "server_id",
-                    "ID do servidor a clonar (obrigatorio)"
+                    "ID do servidor a clonar (opcional, usa o servidor atual)"
                 ),
                 Utils.createCommandOption(
                     ApplicationCommandType.STRING,
@@ -41,7 +41,14 @@ class SvClone : Plugin() {
                 )
             )
         ) { ctx2 ->
-            val guildId = ctx2.getRequiredString("server_id")
+            val guildId = try {
+                ctx2.getString("server_id") ?: StoreStream.getGuildSelected().selectedGuildId.toString()
+            } catch (e: Exception) {
+                return@registerCommand CommandResult(
+                    "Nao foi possivel obter ID do servidor!", null, false
+                )
+            }
+
             val token = try {
                 ctx2.getString("token") ?: RestAPI.AppHeadersProvider.INSTANCE.authToken
             } catch (e: Exception) {
@@ -50,8 +57,12 @@ class SvClone : Plugin() {
                 )
             }
 
-            Utils.threadPool.execute {
-                CloneDialog.show(ctx, guildId, token)
+            try {
+                CloneDialog.show(Utils.appActivity, guildId, token)
+            } catch (e: Exception) {
+                return@registerCommand CommandResult(
+                    "Erro ao abrir dialogo: ${e.message}", null, false
+                )
             }
 
             CommandResult("Abrindo Clone Guild...", null, false)
@@ -81,7 +92,7 @@ class SvClone : Plugin() {
                     ""
                 }
 
-                val btnContainer = LinearLayout(ctx).apply {
+                val btnContainer = LinearLayout(rootView.context).apply {
                     orientation = LinearLayout.VERTICAL
                     setPadding(32, 8, 32, 8)
                     layoutParams = LinearLayout.LayoutParams(
@@ -90,7 +101,7 @@ class SvClone : Plugin() {
                     )
                 }
 
-                val btn = TextView(ctx).apply {
+                val btn = TextView(rootView.context).apply {
                     text = "Clone Guild"
                     setTextColor(Color.WHITE)
                     setBackgroundColor(Color.parseColor("#5865F2"))
@@ -105,11 +116,15 @@ class SvClone : Plugin() {
                         LinearLayout.LayoutParams.WRAP_CONTENT
                     ).apply { setMargins(0, 8, 0, 4) }
                     setOnClickListener {
-                        CloneDialog.show(ctx, guildId.toString(), token)
+                        try {
+                            CloneDialog.show(Utils.appActivity, guildId.toString(), token)
+                        } catch (e: Exception) {
+                            Utils.showToast("Erro ao abrir Clone Dialog: ${e.message}", true)
+                        }
                     }
                 }
 
-                val notice = TextView(ctx).apply {
+                val notice = TextView(rootView.context).apply {
                     text = "bettercloner.vercel.app"
                     setTextColor(Color.parseColor("#5865F2"))
                     textSize = 10f
@@ -123,34 +138,53 @@ class SvClone : Plugin() {
                 btnContainer.addView(btn)
                 btnContainer.addView(notice)
 
-                val parent = rootView.parent as? LinearLayout ?: return@Hook
-                parent.addView(btnContainer, parent.childCount)
+                try {
+                    val parent = rootView.parent as? LinearLayout ?: rootView as? LinearLayout
+                    parent?.addView(btnContainer, parent.childCount)
+                } catch (e: Exception) {
+                    logger.error("Erro ao adicionar botao ao perfil", e)
+                }
             }
         )
     }
 
     private fun checkPendingProgress(ctx: Context) {
-        val savedState = ProgressStateManager.loadProgress(ctx) ?: return
-        if (savedState.isComplete) {
-            ProgressStateManager.clearProgress(ctx)
-            return
-        }
         Utils.threadPool.execute {
-            android.app.AlertDialog.Builder(ctx)
-                .setTitle("SvClone - Clonagem Pendente")
-                .setMessage(
-                    "Encontramos uma clonagem incompleta do servidor " +
-                    "\"${savedState.serverName.ifEmpty { savedState.sourceGuildId }}\". " +
-                    "Deseja continuar de onde parou?"
-                )
-                .setPositiveButton("Continuar") { _, _ ->
-                    CloneDialog.showWithProgress(ctx, savedState)
-                }
-                .setNegativeButton("Descartar") { _, _ ->
+            try {
+                val savedState = ProgressStateManager.loadProgress(ctx) ?: return@execute
+                if (savedState.isComplete) {
                     ProgressStateManager.clearProgress(ctx)
+                    return@execute
                 }
-                .create()
-                .show()
+                
+                Utils.mainThread.post {
+                    try {
+                        android.app.AlertDialog.Builder(Utils.appActivity)
+                            .setTitle("SvClone - Clonagem Pendente")
+                            .setMessage(
+                                "Encontramos uma clonagem incompleta do servidor " +
+                                "\"${savedState.serverName.ifEmpty { savedState.sourceGuildId }}\". " +
+                                "Deseja continuar de onde parou?"
+                            )
+                            .setPositiveButton("Continuar") { _, _ ->
+                                try {
+                                    CloneDialog.showWithProgress(Utils.appActivity, savedState)
+                                } catch (e: Exception) {
+                                    Utils.showToast("Erro ao retomar: ${e.message}", true)
+                                }
+                            }
+                            .setNegativeButton("Descartar") { _, _ ->
+                                ProgressStateManager.clearProgress(ctx)
+                            }
+                            .setCancelable(true)
+                            .show()
+                    } catch (e: Exception) {
+                        logger.error("Erro ao mostrar dialogo de retomada", e)
+                    }
+                }
+            } catch (e: Exception) {
+                logger.error("Erro ao verificar progresso pendente", e)
+            }
         }
     }
 

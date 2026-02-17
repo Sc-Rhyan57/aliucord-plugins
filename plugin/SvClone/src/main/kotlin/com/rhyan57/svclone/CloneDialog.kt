@@ -5,8 +5,6 @@ import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
-import android.os.Handler
-import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -20,16 +18,14 @@ import com.aliucord.Utils
 
 object CloneDialog {
 
-    private val mainHandler = Handler(Looper.getMainLooper())
-
     fun show(ctx: Context, sourceGuildId: String, defaultToken: String) {
-        mainHandler.post {
+        Utils.mainThread.post {
             buildAndShow(ctx, sourceGuildId, defaultToken, null)
         }
     }
 
     fun showWithProgress(ctx: Context, state: ProgressState) {
-        mainHandler.post {
+        Utils.mainThread.post {
             buildAndShow(ctx, state.sourceGuildId, state.token, state)
         }
     }
@@ -241,17 +237,17 @@ object CloneDialog {
                     ctx = ctx,
                     api = DiscordApiClient(token),
                     onLog = { msg ->
-                        mainHandler.post { logView.text = "${logView.text}\n$msg" }
+                        Utils.mainThread.post { logView.text = "${logView.text}\n$msg" }
                     },
                     onProgress = { progress ->
-                        mainHandler.post {
+                        Utils.mainThread.post {
                             val pct = (progress * 100).toInt().coerceIn(0, 100)
                             progressBar.progress = pct
                             progressLabel.text = "$pct%"
                         }
                     },
                     onComplete = { success, msg ->
-                        mainHandler.post {
+                        Utils.mainThread.post {
                             progressBar.progress = if (success) 100 else progressBar.progress
                             progressLabel.text = if (success) "100% - Concluido!" else "Erro!"
                             logView.text = "${logView.text}\n\n$msg"
@@ -269,10 +265,14 @@ object CloneDialog {
             }
         }
 
-        dialog.show()
-        dialog.window?.setLayout(
-            (ctx.resources.displayMetrics.widthPixels * 0.95f).toInt(),
-            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-        )
+        try {
+            dialog.show()
+            dialog.window?.setLayout(
+                (ctx.resources.displayMetrics.widthPixels * 0.95f).toInt(),
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        } catch (e: Exception) {
+            Utils.showToast("Erro ao exibir dialogo: ${e.message}", true)
+        }
     }
 }
