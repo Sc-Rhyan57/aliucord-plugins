@@ -44,6 +44,8 @@ data class ProgressState(
     val autoModCloned: Boolean = false,
     val onboardingCloned: Boolean = false,
     val welcomeCloned: Boolean = false,
+    val savedRoleIdMap: String = "{}",
+    val savedChannelIdMap: String = "{}",
     val isComplete: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )
@@ -94,6 +96,8 @@ object ProgressStateManager {
             put("autoModCloned", state.autoModCloned)
             put("onboardingCloned", state.onboardingCloned)
             put("welcomeCloned", state.welcomeCloned)
+            put("savedRoleIdMap", state.savedRoleIdMap)
+            put("savedChannelIdMap", state.savedChannelIdMap)
             put("isComplete", state.isComplete)
             put("timestamp", state.timestamp)
         }
@@ -149,6 +153,8 @@ object ProgressStateManager {
                 autoModCloned = j.optBoolean("autoModCloned", false),
                 onboardingCloned = j.optBoolean("onboardingCloned", false),
                 welcomeCloned = j.optBoolean("welcomeCloned", false),
+                savedRoleIdMap = j.optString("savedRoleIdMap", "{}"),
+                savedChannelIdMap = j.optString("savedChannelIdMap", "{}"),
                 isComplete = j.optBoolean("isComplete", false),
                 timestamp = j.optLong("timestamp", System.currentTimeMillis())
             )

@@ -70,17 +70,17 @@ class CloneManager(
         Thread {
             try {
                 logger.info("Iniciando clonagem do servidor ${state.sourceGuildId}")
-                CloneSession.log("[INICIO] Iniciando processo de clonagem...")
+                CloneSession.addLog("[INICIO] Iniciando processo de clonagem...")
 
                 val sourceGuild = api.getGuild(state.sourceGuildId)
                 if (sourceGuild == null) {
-                    CloneSession.log("[ERRO] Não foi possível obter dados do servidor")
+                    CloneSession.addLog("[ERRO] Não foi possível obter dados do servidor")
                     CloneSession.complete(false, "Não foi possível obter dados do servidor de origem.")
                     return@Thread
                 }
 
                 val serverName = sourceGuild.optString("name", "servidor")
-                CloneSession.log("[INFO] Servidor: $serverName")
+                CloneSession.addLog("[INFO] Servidor: $serverName")
 
                 val totalSteps = countSteps(state)
                 var currentStep = 0
@@ -89,14 +89,14 @@ class CloneManager(
                     currentStep++
                     val progress = currentStep.toFloat() / totalSteps.toFloat()
                     val pct = (progress * 100).toInt()
-                    CloneSession.log(label)
+                    CloneSession.addLog(label)
                     CloneSession.updateProgress(progress)
                     updateNotification("Clonando: $serverName", label, pct)
                 }
 
                 val targetGuildId: String
                 if (state.targetGuildId.isEmpty()) {
-                    CloneSession.log("[CRIAR] Criando novo servidor...")
+                    CloneSession.addLog("[CRIAR] Criando novo servidor...")
                     val newGuild = api.createGuild(sourceGuild.optString("name", "Servidor Clonado"))
                     if (newGuild == null) {
                         finishNotification(false, "Falha ao criar servidor")
@@ -109,10 +109,10 @@ class CloneManager(
                         CloneSession.complete(false, "Falha ao criar servidor destino: ID inválido.")
                         return@Thread
                     }
-                    CloneSession.log("[OK] Servidor criado: $targetGuildId")
+                    CloneSession.addLog("[OK] Servidor criado: $targetGuildId")
                 } else {
                     targetGuildId = state.targetGuildId
-                    CloneSession.log("[INFO] Usando servidor existente: $targetGuildId")
+                    CloneSession.addLog("[INFO] Usando servidor existente: $targetGuildId")
                 }
 
                 var updatedState = state.copy(targetGuildId = targetGuildId, serverName = serverName)
@@ -124,8 +124,8 @@ class CloneManager(
                 if (state.rolesCloned && state.savedRoleIdMap.isNotEmpty() && state.savedRoleIdMap != "{}") {
                     try {
                         val j = JSONObject(state.savedRoleIdMap)
-                        j.keys().forEach { k -> roleIdMap[k] = j.getString(k) }
-                        CloneSession.log("[INFO] Mapa de cargos restaurado (${roleIdMap.size})")
+                        j.keys().forEach { k: String -> roleIdMap[k] = j.getString(k) }
+                        CloneSession.addLog("[INFO] Mapa de cargos restaurado (${roleIdMap.size})")
                     } catch (e: Exception) {
                         logger.warn("Erro ao restaurar roleIdMap: ${e.message}")
                     }
@@ -135,15 +135,15 @@ class CloneManager(
                 if (state.channelsCloned && state.savedChannelIdMap.isNotEmpty() && state.savedChannelIdMap != "{}") {
                     try {
                         val j = JSONObject(state.savedChannelIdMap)
-                        j.keys().forEach { k -> channelIdMap[k] = j.getString(k) }
-                        CloneSession.log("[INFO] Mapa de canais restaurado (${channelIdMap.size})")
+                        j.keys().forEach { k: String -> channelIdMap[k] = j.getString(k) }
+                        CloneSession.addLog("[INFO] Mapa de canais restaurado (${channelIdMap.size})")
                     } catch (e: Exception) {
                         logger.warn("Erro ao restaurar channelIdMap: ${e.message}")
                     }
                 }
 
                 if (state.cloneSettings && !state.settingsCloned) {
-                    CloneSession.log("[SETTINGS] Clonando configurações...")
+                    CloneSession.addLog("[SETTINGS] Clonando configurações...")
                     val settingsBody = JSONObject()
                     sourceGuild.optString("name").takeIf { it.isNotEmpty() }?.let { settingsBody.put("name", it) }
                     sourceGuild.optString("description").takeIf { it.isNotEmpty() }?.let { settingsBody.put("description", it) }
@@ -160,7 +160,7 @@ class CloneManager(
                 if (state.cloneIcon && !state.iconCloned) {
                     val iconHash = sourceGuild.optString("icon")
                     if (iconHash.isNotEmpty() && iconHash != "null") {
-                        CloneSession.log("[ICON] Baixando ícone...")
+                        CloneSession.addLog("[ICON] Baixando ícone...")
                         val animated = iconHash.startsWith("a_")
                         val ext = if (animated) "gif" else "png"
                         val url = "https://cdn.discordapp.com/icons/${state.sourceGuildId}/$iconHash.$ext?size=4096"
@@ -181,7 +181,7 @@ class CloneManager(
                 if (state.cloneBanner && !state.bannerCloned) {
                     val bannerHash = sourceGuild.optString("banner")
                     if (bannerHash.isNotEmpty() && bannerHash != "null") {
-                        CloneSession.log("[BANNER] Baixando banner...")
+                        CloneSession.addLog("[BANNER] Baixando banner...")
                         val animated = bannerHash.startsWith("a_")
                         val ext = if (animated) "gif" else "png"
                         val url = "https://cdn.discordapp.com/banners/${state.sourceGuildId}/$bannerHash.$ext?size=4096"
@@ -200,7 +200,7 @@ class CloneManager(
                 }
 
                 if (state.cloneRoles && !state.rolesCloned) {
-                    CloneSession.log("[ROLES] Clonando cargos...")
+                    CloneSession.addLog("[ROLES] Clonando cargos...")
                     val roles = api.getRoles(state.sourceGuildId)
                     val rolesList = mutableListOf<JSONObject>()
                     for (i in 0 until roles.length()) rolesList.add(roles.getJSONObject(i))
@@ -235,7 +235,7 @@ class CloneManager(
                 }
 
                 if (state.cloneChannels && !state.channelsCloned) {
-                    CloneSession.log("[CHANNELS] Clonando canais...")
+                    CloneSession.addLog("[CHANNELS] Clonando canais...")
                     val channels = api.getChannels(state.sourceGuildId)
                     val channelList = mutableListOf<JSONObject>()
                     for (i in 0 until channels.length()) channelList.add(channels.getJSONObject(i))
@@ -291,7 +291,7 @@ class CloneManager(
                 }
 
                 if (state.cloneEmojis && !state.emojisCloned) {
-                    CloneSession.log("[EMOJIS] Clonando emojis...")
+                    CloneSession.addLog("[EMOJIS] Clonando emojis...")
                     val emojis = api.getEmojis(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until emojis.length()) {
@@ -315,7 +315,7 @@ class CloneManager(
                 }
 
                 if (state.cloneStickers && !state.stickersCloned) {
-                    CloneSession.log("[STICKERS] Clonando stickers...")
+                    CloneSession.addLog("[STICKERS] Clonando stickers...")
                     val stickers = api.getStickers(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until stickers.length()) {
@@ -345,7 +345,7 @@ class CloneManager(
                 }
 
                 if (state.cloneSounds && !state.soundsCloned) {
-                    CloneSession.log("[SOUNDS] Clonando sons...")
+                    CloneSession.addLog("[SOUNDS] Clonando sons...")
                     val sounds = api.getSoundboardSounds(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until sounds.length()) {
@@ -372,7 +372,7 @@ class CloneManager(
                 }
 
                 if (state.cloneMessages && !state.messagesCloned) {
-                    CloneSession.log("[MESSAGES] Clonando mensagens...")
+                    CloneSession.addLog("[MESSAGES] Clonando mensagens...")
                     var totalMessages = 0
                     for ((sourceChannelId, targetChannelId) in channelIdMap) {
                         try {
@@ -426,7 +426,7 @@ class CloneManager(
                 }
 
                 if (state.cloneBans && !state.bansCloned) {
-                    CloneSession.log("[BANS] Clonando banimentos...")
+                    CloneSession.addLog("[BANS] Clonando banimentos...")
                     val bans = api.getBans(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until bans.length()) {
@@ -443,7 +443,7 @@ class CloneManager(
                 }
 
                 if (state.cloneEvents && !state.eventsCloned) {
-                    CloneSession.log("[EVENTS] Clonando eventos...")
+                    CloneSession.addLog("[EVENTS] Clonando eventos...")
                     val events = api.getScheduledEvents(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until events.length()) {
@@ -472,7 +472,7 @@ class CloneManager(
                 }
 
                 if (state.cloneAutoMod && !state.autoModCloned) {
-                    CloneSession.log("[AUTOMOD] Clonando AutoMod...")
+                    CloneSession.addLog("[AUTOMOD] Clonando AutoMod...")
                     val rules = api.getAutoModRules(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until rules.length()) {
@@ -505,7 +505,7 @@ class CloneManager(
                 }
 
                 if (state.cloneOnboarding && !state.onboardingCloned) {
-                    CloneSession.log("[ONBOARDING] Clonando Onboarding...")
+                    CloneSession.addLog("[ONBOARDING] Clonando Onboarding...")
                     val onboarding = api.getOnboarding(state.sourceGuildId)
                     if (onboarding != null && onboarding.optBoolean("enabled", false)) {
                         val onboardingBody = JSONObject().apply {
@@ -554,7 +554,7 @@ class CloneManager(
                 }
 
                 if (state.cloneWelcome && !state.welcomeCloned) {
-                    CloneSession.log("[WELCOME] Clonando Welcome Screen...")
+                    CloneSession.addLog("[WELCOME] Clonando Welcome Screen...")
                     val welcome = api.getWelcomeScreen(state.sourceGuildId)
                     if (welcome != null) {
                         val welcomeBody = JSONObject().apply {
@@ -585,7 +585,7 @@ class CloneManager(
                 }
 
                 if (state.saveMidia && mediaBytesMap.isNotEmpty()) {
-                    CloneSession.log("[ZIP] Salvando mídia...")
+                    CloneSession.addLog("[ZIP] Salvando mídia...")
                     saveMidiaZip(serverName, mediaBytesMap)
                     tick("[OK] Mídia salva")
                 }
@@ -676,10 +676,10 @@ class CloneManager(
                     zos.closeEntry()
                 }
             }
-            CloneSession.log("[OK] ZIP: ${zipFile.absolutePath}")
+            CloneSession.addLog("[OK] ZIP: ${zipFile.absolutePath}")
         } catch (e: Exception) {
             logger.error("Erro ao salvar ZIP", e)
-            CloneSession.log("[ERRO] ZIP: ${e.message}")
+            CloneSession.addLog("[ERRO] ZIP: ${e.message}")
         }
     }
 }

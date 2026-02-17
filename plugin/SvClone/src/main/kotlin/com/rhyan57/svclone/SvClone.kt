@@ -57,7 +57,7 @@ class SvClone : Plugin() {
             if (state == null || state.isComplete) {
                 CommandsAPI.CommandResult("❌ Nenhuma clonagem em andamento.", null, false)
             } else {
-                CloneDialog.showActiveSession(ctx.context, settings)
+                CloneDialog.showProgressOnly(ctx.context, settings)
                 CommandsAPI.CommandResult("Reabrindo painel de clonagem...", null, false)
             }
         }
