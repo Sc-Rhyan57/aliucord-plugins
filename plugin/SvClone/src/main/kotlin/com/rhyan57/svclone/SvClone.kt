@@ -1,7 +1,7 @@
 package com.rhyan57.svclone
 
+import android.app.NotificationManager
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.aliucord.Utils
 import com.aliucord.annotations.AliucordPlugin
 import com.aliucord.api.CommandsAPI.CommandResult
@@ -17,47 +18,50 @@ import com.aliucord.entities.Plugin
 import com.aliucord.patcher.after
 import com.discord.api.commands.ApplicationCommandType
 import com.discord.stores.StoreStream
+import com.discord.utilities.color.ColorCompat
 import com.discord.utilities.rest.RestAPI
 import com.discord.widgets.guilds.profile.WidgetGuildProfileSheet
+import com.lytefast.flexinput.R
 
 @AliucordPlugin
 @Suppress("unused")
 class SvClone : Plugin() {
 
     override fun start(ctx: Context) {
+        clearNotifications(ctx)
         checkPendingProgress(ctx)
 
         commands.registerCommand(
             "clone-server",
-            "Clona um servidor Discord. Baseado em https://bettercloner.vercel.app",
+            "Clona um servidor Discord",
             listOf(
                 Utils.createCommandOption(
                     ApplicationCommandType.STRING,
                     "server_id",
-                    "ID do servidor a clonar (opcional, usa o servidor atual)"
+                    "ID do servidor a clonar (opcional)"
                 ),
                 Utils.createCommandOption(
                     ApplicationCommandType.STRING,
                     "token",
-                    "Token Discord (opcional, usa o seu por padrao)"
+                    "Token Discord (opcional)"
                 )
             )
         ) { ctx2 ->
             val guildId = try {
                 ctx2.getString("server_id") ?: StoreStream.getGuildSelected().selectedGuildId.toString()
             } catch (e: Exception) {
-                logger.error("Erro ao obter guild ID", e)
+                logger.error("Erro ao obter guild ID", null)
                 return@registerCommand CommandResult(
-                    "Nao foi possivel obter ID do servidor!", null, false
+                    "Erro ao obter ID do servidor!", null, false
                 )
             }
 
             val token = try {
                 ctx2.getString("token") ?: RestAPI.AppHeadersProvider.INSTANCE.authToken
             } catch (e: Exception) {
-                logger.error("Erro ao obter token", e)
+                logger.error("Erro ao obter token", null)
                 return@registerCommand CommandResult(
-                    "Nao foi possivel obter seu token. Informe manualmente.", null, false
+                    "Erro ao obter seu token", null, false
                 )
             }
 
@@ -81,38 +85,48 @@ class SvClone : Plugin() {
                 field.isAccessible = true
                 field.getLong(this)
             } catch (e: Exception) {
-                logger.error("Erro ao obter guildId", e)
+                logger.error("Erro ao obter guildId", null)
                 StoreStream.getGuildSelected().selectedGuildId
             }
 
             val token = try {
                 RestAPI.AppHeadersProvider.INSTANCE.authToken
             } catch (e: Exception) {
-                logger.error("Erro ao obter token", e)
+                logger.error("Erro ao obter token", null)
                 ""
             }
 
             try {
                 val root = view.parent as? ViewGroup ?: return@after
+                val container = root.getChildAt(0) as? LinearLayout ?: return@after
+                
+                val btnId = View.generateViewId()
+                if (container.findViewById<TextView>(btnId) != null) return@after
                 
                 val btn = TextView(view.context).apply {
-                    text = "Clone Guild"
-                    setTextColor(Color.WHITE)
-                    textSize = 16f
+                    id = btnId
+                    text = "Clone Server"
+                    setTextColor(ColorCompat.getThemedColor(context, R.b.white))
+                    textSize = 14f
                     setTypeface(null, Typeface.BOLD)
-                    gravity = Gravity.CENTER
-                    setPadding(0, 40, 0, 40)
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(20, 32, 20, 32)
+                    
+                    val icon = ContextCompat.getDrawable(context, R.e.ic_copy_24dp)?.mutate()
+                    icon?.setTint(ColorCompat.getThemedColor(context, R.b.white))
+                    setCompoundDrawablesRelativeWithIntrinsicBounds(icon, null, null, null)
+                    compoundDrawablePadding = 16
                     
                     background = GradientDrawable().apply {
-                        cornerRadius = 16f
-                        setColor(Color.parseColor("#5865F2"))
+                        cornerRadius = 10f
+                        setColor(ColorCompat.getThemedColor(context, R.b.brand_500))
                     }
                     
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                     ).apply {
-                        setMargins(32, 16, 32, 16)
+                        setMargins(24, 10, 24, 10)
                     }
                     
                     setOnClickListener {
@@ -125,11 +139,19 @@ class SvClone : Plugin() {
                     }
                 }
 
-                val container = root.getChildAt(0) as? LinearLayout
-                container?.addView(btn, container.childCount)
+                container.addView(btn, container.childCount)
             } catch (e: Exception) {
-                logger.error("Erro ao adicionar botao no perfil", e)
+                logger.error("Erro ao adicionar botao no perfil", null)
             }
+        }
+    }
+
+    private fun clearNotifications(ctx: Context) {
+        try {
+            val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.cancel(12345)
+        } catch (e: Exception) {
+            logger.error("Erro ao limpar notificações", null)
         }
     }
 
@@ -144,14 +166,14 @@ class SvClone : Plugin() {
                 
                 Utils.mainThread.post {
                     try {
-                        android.app.AlertDialog.Builder(Utils.appActivity)
-                            .setTitle("SvClone - Clonagem Pendente")
-                            .setMessage(
+                        android.app.AlertDialog.Builder(Utils.appActivity).apply {
+                            setTitle("SvClone - Sessão Anterior")
+                            setMessage(
                                 "Encontramos uma clonagem incompleta do servidor " +
                                 "\"${savedState.serverName.ifEmpty { savedState.sourceGuildId }}\". " +
                                 "Deseja continuar de onde parou?"
                             )
-                            .setPositiveButton("Continuar") { _, _ ->
+                            setPositiveButton("Continuar") { _, _ ->
                                 try {
                                     CloneDialog.showWithProgress(Utils.appActivity, savedState)
                                 } catch (e: Exception) {
@@ -159,17 +181,19 @@ class SvClone : Plugin() {
                                     Utils.showToast("Erro ao retomar", true)
                                 }
                             }
-                            .setNegativeButton("Descartar") { _, _ ->
+                            setNegativeButton("Descartar") { _, _ ->
                                 ProgressStateManager.clearProgress(ctx)
                             }
-                            .setCancelable(true)
-                            .show()
+                            setCancelable(true)
+                            
+                            create()
+                        }.show()
                     } catch (e: Exception) {
-                        logger.error("Erro ao mostrar dialogo de retomada", e)
+                        logger.error("Erro ao mostrar dialogo de retomada", null)
                     }
                 }
             } catch (e: Exception) {
-                logger.error("Erro ao verificar progresso pendente", e)
+                logger.error("Erro ao verificar progresso pendente", null)
             }
         }
     }
@@ -177,5 +201,6 @@ class SvClone : Plugin() {
     override fun stop(ctx: Context) {
         patcher.unpatchAll()
         commands.unregisterAll()
+        clearNotifications(ctx)
     }
 }

@@ -16,6 +16,13 @@ data class ProgressState(
     val cloneIcon: Boolean,
     val cloneBanner: Boolean,
     val saveMidia: Boolean,
+    val cloneSounds: Boolean = false,
+    val cloneMessages: Boolean = false,
+    val cloneBans: Boolean = false,
+    val cloneEvents: Boolean = false,
+    val cloneAutoMod: Boolean = false,
+    val cloneOnboarding: Boolean = false,
+    val cloneWelcome: Boolean = false,
     val rolesCloned: Boolean = false,
     val channelsCloned: Boolean = false,
     val emojisCloned: Boolean = false,
@@ -23,6 +30,13 @@ data class ProgressState(
     val settingsCloned: Boolean = false,
     val iconCloned: Boolean = false,
     val bannerCloned: Boolean = false,
+    val soundsCloned: Boolean = false,
+    val messagesCloned: Boolean = false,
+    val bansCloned: Boolean = false,
+    val eventsCloned: Boolean = false,
+    val autoModCloned: Boolean = false,
+    val onboardingCloned: Boolean = false,
+    val welcomeCloned: Boolean = false,
     val isComplete: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )
@@ -45,6 +59,13 @@ object ProgressStateManager {
             put("cloneIcon", state.cloneIcon)
             put("cloneBanner", state.cloneBanner)
             put("saveMidia", state.saveMidia)
+            put("cloneSounds", state.cloneSounds)
+            put("cloneMessages", state.cloneMessages)
+            put("cloneBans", state.cloneBans)
+            put("cloneEvents", state.cloneEvents)
+            put("cloneAutoMod", state.cloneAutoMod)
+            put("cloneOnboarding", state.cloneOnboarding)
+            put("cloneWelcome", state.cloneWelcome)
             put("rolesCloned", state.rolesCloned)
             put("channelsCloned", state.channelsCloned)
             put("emojisCloned", state.emojisCloned)
@@ -52,6 +73,13 @@ object ProgressStateManager {
             put("settingsCloned", state.settingsCloned)
             put("iconCloned", state.iconCloned)
             put("bannerCloned", state.bannerCloned)
+            put("soundsCloned", state.soundsCloned)
+            put("messagesCloned", state.messagesCloned)
+            put("bansCloned", state.bansCloned)
+            put("eventsCloned", state.eventsCloned)
+            put("autoModCloned", state.autoModCloned)
+            put("onboardingCloned", state.onboardingCloned)
+            put("welcomeCloned", state.welcomeCloned)
             put("isComplete", state.isComplete)
             put("timestamp", state.timestamp)
         }
@@ -79,6 +107,13 @@ object ProgressStateManager {
                 cloneIcon = j.getBoolean("cloneIcon"),
                 cloneBanner = j.getBoolean("cloneBanner"),
                 saveMidia = j.getBoolean("saveMidia"),
+                cloneSounds = j.optBoolean("cloneSounds", false),
+                cloneMessages = j.optBoolean("cloneMessages", false),
+                cloneBans = j.optBoolean("cloneBans", false),
+                cloneEvents = j.optBoolean("cloneEvents", false),
+                cloneAutoMod = j.optBoolean("cloneAutoMod", false),
+                cloneOnboarding = j.optBoolean("cloneOnboarding", false),
+                cloneWelcome = j.optBoolean("cloneWelcome", false),
                 rolesCloned = j.optBoolean("rolesCloned", false),
                 channelsCloned = j.optBoolean("channelsCloned", false),
                 emojisCloned = j.optBoolean("emojisCloned", false),
@@ -86,6 +121,13 @@ object ProgressStateManager {
                 settingsCloned = j.optBoolean("settingsCloned", false),
                 iconCloned = j.optBoolean("iconCloned", false),
                 bannerCloned = j.optBoolean("bannerCloned", false),
+                soundsCloned = j.optBoolean("soundsCloned", false),
+                messagesCloned = j.optBoolean("messagesCloned", false),
+                bansCloned = j.optBoolean("bansCloned", false),
+                eventsCloned = j.optBoolean("eventsCloned", false),
+                autoModCloned = j.optBoolean("autoModCloned", false),
+                onboardingCloned = j.optBoolean("onboardingCloned", false),
+                welcomeCloned = j.optBoolean("welcomeCloned", false),
                 isComplete = j.optBoolean("isComplete", false),
                 timestamp = j.optLong("timestamp", System.currentTimeMillis())
             )
