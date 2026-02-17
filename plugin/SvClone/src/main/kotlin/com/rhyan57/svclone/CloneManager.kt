@@ -78,7 +78,7 @@ class CloneManager(
                 
                 val sourceGuild = api.getGuild(state.sourceGuildId)
                 if (sourceGuild == null) {
-                    logger.error("Falha ao obter dados do servidor de origem")
+                    logger.error("Falha ao obter dados do servidor de origem", null)
                     onComplete(false, "Nao foi possivel obter dados do servidor de origem.")
                     return@Thread
                 }
@@ -107,7 +107,7 @@ class CloneManager(
                     
                     val newGuild = api.createGuild(sourceGuild.optString("name", "Servidor Clonado"))
                     if (newGuild == null) {
-                        logger.error("Falha ao criar servidor destino")
+                        logger.error("Falha ao criar servidor destino", null)
                         finishNotification(false, "Falha ao criar servidor")
                         onComplete(false, "Falha ao criar servidor destino.")
                         return@Thread
