@@ -53,10 +53,10 @@ subprojects {
     }
 
     configure<AliucordExtension> {
-        author("zt", 289556910426816513L)
+        author("Rhyan57", 896604349311115304L)
 
-        updateUrl.set("https://raw.githubusercontent.com/zt64/aliucord-plugins/builds/updater.json")
-        buildUrl.set("https://raw.githubusercontent.com/zt64/aliucord-plugins/builds/%s.zip")
+        updateUrl.set("https://raw.githubusercontent.com/Sc-rhyan57/aliucord-plugins/builds/updater.json")
+        buildUrl.set("https://raw.githubusercontent.com/Sc-rhyan57/aliucord-plugins/builds/%s.zip")
     }
 
     configure<KtlintExtension> {
@@ -94,7 +94,7 @@ tasks.register("generateReadMe") {
             appendLine("# Aliucord Plugins")
             appendLine()
             appendLine(
-                "[![Plugins](https://img.shields.io/badge/Plugins-${plugins.size}-blue?style=for-the-badge)](https://github.com/zt64/aliucord-plugins)"
+                "[![Plugins](https://img.shields.io/badge/Plugins-${plugins.size}-blue?style=for-the-badge)](https://github.com/Sc-rhyan57/aliucord-plugins)"
             )
             appendLine()
             appendLine("A collection of plugins for [Aliucord](https://github.com/Aliucord), a Discord mobile client mod.")
@@ -115,7 +115,7 @@ tasks.register("generateReadMe") {
             plugins.forEach { subproject ->
                 val description = subproject.description ?: "No description provided."
                 appendLine(
-                    "| [**${subproject.name}**](https://github.com/zt64/aliucord-plugins/raw/builds/${subproject.name}.zip) | $description |"
+                    "| [**${subproject.name}**](https://github.com/Sc-rhyan57/aliucord-plugins/raw/builds/${subproject.name}.zip) | $description |"
                 )
             }
         }
