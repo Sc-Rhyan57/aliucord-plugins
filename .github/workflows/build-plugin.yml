@@ -1,0 +1,60 @@
+name: Build Aliucord Plugin
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      plugin_name:
+        description: 'Plugin a compilar'
+        required: false
+        default: 'SvClone'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: 17
+          cache: gradle
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Build plugin
+        run: |
+          PLUGIN="${{ github.event.inputs.plugin_name || 'SvClone' }}"
+          ./gradlew :${PLUGIN}:make --no-daemon --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.plugin_name || 'SvClone' }}-zip
+          path: '**/builds/outputs/*.zip'
+          if-no-files-found: error
+      - name: Deploy builds branch
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          mkdir -p /tmp/builds
+          find . -name '*.zip' -path '*/builds/outputs/*' -exec cp {} /tmp/builds/ \;
+          if git show-ref --verify --quiet refs/remotes/origin/builds; then
+            git checkout -b builds origin/builds
+          else
+            git checkout --orphan builds
+            git rm -rf . 2>/dev/null || true
+          fi
+          mkdir -p plugins
+          cp /tmp/builds/*.zip plugins/ 2>/dev/null || true
+          git add plugins/ 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Build: ${{ github.sha }}"
+          git push origin builds --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
