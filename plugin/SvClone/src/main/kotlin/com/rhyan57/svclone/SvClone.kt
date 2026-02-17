@@ -14,6 +14,7 @@ import com.aliucord.annotations.AliucordPlugin
 import com.aliucord.api.CommandsAPI
 import com.aliucord.entities.Plugin
 import com.aliucord.patcher.after
+import com.discord.api.commands.ApplicationCommandType
 import com.discord.models.guild.Guild
 import com.discord.widgets.guilds.profile.WidgetGuildProfileSheet
 
@@ -28,8 +29,8 @@ class SvClone : Plugin() {
             "clone-server",
             "Clonar servidor do Discord",
             listOf(
-                Utils.createCommandOption(CommandsAPI.OptionType.STRING, "server_id", "ID do servidor", null, true),
-                Utils.createCommandOption(CommandsAPI.OptionType.STRING, "token", "Token Discord (opcional)", null, false)
+                Utils.createCommandOption(ApplicationCommandType.STRING, "server_id", "ID do servidor", null, true),
+                Utils.createCommandOption(ApplicationCommandType.STRING, "token", "Token Discord (opcional)", null, false)
             )
         ) { ctx ->
             val serverId = ctx.getRequiredString("server_id")
