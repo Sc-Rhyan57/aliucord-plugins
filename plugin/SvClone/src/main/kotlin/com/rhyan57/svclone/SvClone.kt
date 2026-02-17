@@ -1,10 +1,13 @@
 package com.rhyan57.svclone
 
 import android.annotation.SuppressLint
+import android.animation.ValueAnimator
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Shader
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -157,17 +160,61 @@ class SvClone : Plugin() {
         val button = TextView(context, null, 0, R.i.UiKit_Settings_Item_Icon).apply {
             id = profileButtonId
             text = "Clone Server"
-            setTextColor(Color.WHITE)
             val pd = DimenUtils.dpToPx(16)
             setPadding(pd, pd, pd, pd)
             typeface = ResourcesCompat.getFont(context, Constants.Fonts.whitney_semibold)
             layoutParams = container.getChildAt(0).layoutParams
+            
+            post {
+                val textWidth = paint.measureText(text.toString())
+                val animator = ValueAnimator.ofFloat(0f, 360f)
+                animator.duration = 3000
+                animator.repeatCount = ValueAnimator.INFINITE
+                animator.addUpdateListener { animation ->
+                    val hue = animation.animatedValue as Float
+                    val colors = intArrayOf(
+                        Color.HSVToColor(floatArrayOf(hue, 1f, 1f)),
+                        Color.HSVToColor(floatArrayOf((hue + 60f) % 360f, 1f, 1f)),
+                        Color.HSVToColor(floatArrayOf((hue + 120f) % 360f, 1f, 1f)),
+                        Color.HSVToColor(floatArrayOf((hue + 180f) % 360f, 1f, 1f)),
+                        Color.HSVToColor(floatArrayOf((hue + 240f) % 360f, 1f, 1f)),
+                        Color.HSVToColor(floatArrayOf((hue + 300f) % 360f, 1f, 1f))
+                    )
+                    val gradient = LinearGradient(
+                        0f, 0f, textWidth, 0f,
+                        colors,
+                        null,
+                        Shader.TileMode.CLAMP
+                    )
+                    paint.shader = gradient
+                    invalidate()
+                }
+                animator.start()
+            }
+            
             setOnClickListener {
-                val currentToken = TokenManager.getCurrentToken() ?: ""
-                CloneDialog.show(context, guild.getId().toString(), currentToken, settings)
+                try {
+                    logger.info("[ SVCLONER ] Clone button clicked for guild: ${guild.getId()}")
+                    val currentToken = TokenManager.getCurrentToken() ?: ""
+                    val guildIdStr = guild.getId().toString()
+                    logger.info("[ SVCLONER ] Opening dialog with guildId: $guildIdStr, token: ${if(currentToken.isEmpty()) "empty" else "present"}")
+                    
+                    Utils.mainThread.post {
+                        try {
+                            CloneDialog.show(Utils.appActivity ?: context, guildIdStr, currentToken, settings)
+                        } catch (e: Exception) {
+                            logger.error("[ SVCLONER ] Error calling CloneDialog.show: ", e)
+                            Utils.showToast("Error opening clone menu: ${e.message}", true)
+                        }
+                    }
+                } catch (e: Exception) {
+                    logger.error("[ SVCLONER ] Error in button onClick: ", e)
+                    Utils.showToast("Error: ${e.message}", true)
+                }
             }
         }
         container.addView(button)
+        logger.info("[ SVCLONER ] Clone button added to profile")
     }
 
     private fun clearNotifications(context: Context) {
