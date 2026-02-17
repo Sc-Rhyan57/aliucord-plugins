@@ -64,11 +64,11 @@ object CloneDialog {
 
             val progressBar = ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
                 max = 100
-                progress = (CloneProgressTracker.progress * 100).toInt()
+                progress = (CloneSession.currentProgress * 100).toInt()
             }
 
             val progressLabel = TextView(activity).apply {
-                setText("${(CloneProgressTracker.progress * 100).toInt()}%")
+                setText("${(CloneSession.currentProgress * 100).toInt()}%")
                 setTextColor(Color.parseColor("#80848E"))
                 textSize = 11f
                 gravity = Gravity.CENTER
@@ -82,7 +82,7 @@ object CloneDialog {
             }
 
             val logView = TextView(activity).apply {
-                setText(CloneProgressTracker.logs.joinToString("\n"))
+                setText(CloneSession.logs.toString())
                 setTextColor(Color.parseColor("#B5BAC1"))
                 textSize = 10f
                 setPadding(10, 10, 10, 10)
@@ -98,13 +98,13 @@ object CloneDialog {
             container.addView(progressLabel)
             container.addView(logScrollView)
 
-            CloneProgressTracker.onLog = { msg ->
+            CloneSession.onLog = { msg ->
                 Utils.mainThread.post {
                     logView.setText("${logView.text}\n$msg")
                     logScrollView.post { logScrollView.fullScroll(ScrollView.FOCUS_DOWN) }
                 }
             }
-            CloneProgressTracker.onProgress = { p ->
+            CloneSession.onProgress = { p ->
                 Utils.mainThread.post {
                     val pct = (p * 100).toInt().coerceIn(0, 100)
                     progressBar.progress = pct
@@ -118,12 +118,12 @@ object CloneDialog {
                 .create()
 
             dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "❌ Fechar") { d, _ ->
-                CloneProgressTracker.onLog = null
-                CloneProgressTracker.onProgress = null
+                CloneSession.onLog = null
+                CloneSession.onProgress = null
                 d.dismiss()
             }
 
-            CloneProgressTracker.onComplete = { success, msg ->
+            CloneSession.onComplete = { success, msg ->
                 Utils.mainThread.post {
                     progressBar.progress = if (success) 100 else progressBar.progress
                     progressLabel.setText(if (success) "100%" else "Erro")
@@ -537,8 +537,8 @@ object CloneDialog {
         dialog.setButton(AlertDialog.BUTTON_POSITIVE, "▶️ Iniciar") { _, _ -> }
         dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "⬇️ Minimizar") { _, _ -> }
         dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "❌ Fechar") { d, _ ->
-            CloneProgressTracker.onLog = null
-            CloneProgressTracker.onProgress = null
+            CloneSession.onLog = null
+            CloneSession.onProgress = null
             d.dismiss()
         }
 
@@ -553,8 +553,8 @@ object CloneDialog {
             negativeBtn.setTextColor(Color.parseColor("#ED4245"))
 
             neutralBtn.setOnClickListener {
-                CloneProgressTracker.onLog = null
-                CloneProgressTracker.onProgress = null
+                CloneSession.onLog = null
+                CloneSession.onProgress = null
                 dialog.dismiss()
                 Utils.showToast("Clonagem continua em background. Use /clone-progress para ver.", false)
             }
@@ -573,8 +573,7 @@ object CloneDialog {
                 progressContainer.visibility = View.VISIBLE
                 logView.setText("")
 
-                CloneProgressTracker.reset()
-                CloneProgressTracker.isActive = true
+                CloneSession.start()
 
                 val messageLimit = try { messageLimitField.text.toString().toInt() } catch (e: Exception) { 100 }
 
@@ -621,20 +620,20 @@ object CloneDialog {
                     welcomeCloned   = resumeState?.welcomeCloned ?: false
                 )
 
-                CloneProgressTracker.onLog = { msg ->
+                CloneSession.onLog = { msg ->
                     Utils.mainThread.post {
                         logView.setText("${logView.text}\n$msg")
                         logScrollView.post { logScrollView.fullScroll(ScrollView.FOCUS_DOWN) }
                     }
                 }
-                CloneProgressTracker.onProgress = { progress ->
+                CloneSession.onProgress = { progress ->
                     Utils.mainThread.post {
                         val pct = (progress * 100).toInt().coerceIn(0, 100)
                         progressBar.progress = pct
                         progressLabel.setText("$pct%")
                     }
                 }
-                CloneProgressTracker.onComplete = { success, msg ->
+                CloneSession.onComplete = { success, msg ->
                     Utils.mainThread.post {
                         progressBar.progress = if (success) 100 else progressBar.progress
                         progressLabel.setText(if (success) "100%" else "Erro")
@@ -652,10 +651,7 @@ object CloneDialog {
 
                 CloneManager(
                     ctx = ctx,
-                    api = DiscordApiClient(token),
-                    onLog = CloneProgressTracker.onLog!!,
-                    onProgress = CloneProgressTracker.onProgress!!,
-                    onComplete = CloneProgressTracker.onComplete!!
+                    api = DiscordApiClient(token)
                 ).execute(state)
             }
         }
