@@ -1,6 +1,7 @@
 package com.rhyan57.svclone
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
 import android.graphics.Color
@@ -34,6 +35,11 @@ class SvClone : Plugin() {
     override fun start(context: Context) {
         TokenManager.initialize(settings)
         clearNotifications(context)
+
+        Utils.threadPool.execute {
+            Thread.sleep(2000)
+            checkPendingProgress(context)
+        }
 
         commands.registerCommand(
             "clone-server",
@@ -86,6 +92,35 @@ class SvClone : Plugin() {
         }
 
         patchWidgetGuildProfileSheet()
+    }
+
+    private fun checkPendingProgress(context: Context) {
+        val state = ProgressStateManager.loadProgress(context)
+        if (state != null && !state.isComplete) {
+            Utils.mainThread.post {
+                showRestoreDialog(context, state)
+            }
+        }
+    }
+
+    private fun showRestoreDialog(context: Context, state: ProgressState) {
+        val activity = Utils.appActivity ?: return
+
+        AlertDialog.Builder(activity)
+            .setTitle("🔄 Clonagem Interrompida")
+            .setMessage("Detectamos uma clonagem em andamento do servidor '${state.serverName}' que foi interrompida.\n\nDeseja continuar de onde parou?")
+            .setPositiveButton("✅ Continuar") { dialog, _ ->
+                dialog.dismiss()
+                CloneDialog.showWithProgress(context, state, settings)
+                CloneManager(context, DiscordApiClient(state.token)).execute(state)
+            }
+            .setNegativeButton("❌ Descartar") { dialog, _ ->
+                ProgressStateManager.clearProgress(context)
+                dialog.dismiss()
+                Utils.showToast("Progresso descartado.", false)
+            }
+            .setCancelable(false)
+            .show()
     }
 
     private fun patchWidgetGuildProfileSheet() {
