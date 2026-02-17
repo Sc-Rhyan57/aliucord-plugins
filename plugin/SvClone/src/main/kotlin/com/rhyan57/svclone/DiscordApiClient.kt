@@ -30,7 +30,7 @@ class DiscordApiClient(private val token: String) {
 
     private fun handleRateLimit(text: String) {
         val secs = try { JSONObject(text).optDouble("retry_after", 2.0) } catch (_: Exception) { 2.0 }
-        CloneSession.addLog("[RATE LIMIT] Aguardando ${secs.toInt() + 1}s...")
+        CloneSession.addLog("[DISCORD RATE LIMIT] Waiting ${secs.toInt() + 1}s...")
         Thread.sleep((secs * 1000).toLong() + 1000)
     }
 

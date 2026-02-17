@@ -43,7 +43,7 @@ class SvClone : Plugin() {
 
         commands.registerCommand(
             "clone-server",
-            "Clonar servidor do Discord",
+            "[ SVCLONER ] Clones the current server or the inserted server to a target server.",
             listOf(
                 Utils.createCommandOption(ApplicationCommandType.STRING, "server_id", "ID do servidor (opcional)", null, false),
                 Utils.createCommandOption(ApplicationCommandType.STRING, "token", "Token Discord (opcional)", null, false)
@@ -52,42 +52,42 @@ class SvClone : Plugin() {
             val serverId = ctx.getStringOrDefault("server_id", "")
             val token = ctx.getStringOrDefault("token", "")
             CloneDialog.show(ctx.context, serverId, token, settings)
-            CommandsAPI.CommandResult("Abrindo diálogo de clonagem...", null, false)
+            CommandsAPI.CommandResult("Displaying the Cloning menu...", null, false)
         }
 
         commands.registerCommand(
             "show-clone-progress",
-            "Reabrir a janela de clonagem em andamento"
+            "[ SVCLONER ] shows the progress and console of current cloning."
         ) { ctx ->
             val state = ProgressStateManager.loadProgress(ctx.context)
             if (state == null || state.isComplete) {
-                CommandsAPI.CommandResult("❌ Nenhuma clonagem em andamento.", null, false)
+                CommandsAPI.CommandResult("× Sorry, there is no ongoing process.", null, false)
             } else {
                 CloneDialog.showProgressOnly(ctx.context, settings)
-                CommandsAPI.CommandResult("Reabrindo painel de clonagem...", null, false)
+                CommandsAPI.CommandResult("displaying progress menu and console...", null, false)
             }
         }
 
         commands.registerCommand(
             "add-token",
-            "Adicionar token para rotação de contas",
+            "[ SVCLONER ] Add token for account rotation.",
             listOf(Utils.createCommandOption(ApplicationCommandType.STRING, "token", "Token Discord", null, true))
         ) { ctx ->
             val token = ctx.getRequiredString("token")
             TokenManager.addToken(settings, token)
-            CommandsAPI.CommandResult("✅ Token adicionado!", null, false)
+            CommandsAPI.CommandResult("✓ Token added successfully!", null, false)
         }
 
         commands.registerCommand(
             "list-tokens",
-            "Listar todos os tokens salvos"
+            "[ SVCLONER ] List all saved rotation tokens"
         ) { ctx ->
             val tokens = TokenManager.getTokens()
             if (tokens.isEmpty()) {
-                CommandsAPI.CommandResult("❌ Nenhum token salvo.", null, false)
+                CommandsAPI.CommandResult("× You haven't saved any tokens yet. ", null, false)
             } else {
                 val message = tokens.mapIndexed { i, t -> "${i + 1}. ${TokenManager.getTokenInfo(t)}" }.joinToString("\n")
-                CommandsAPI.CommandResult("📋 Tokens:\n$message", null, false)
+                CommandsAPI.CommandResult("> Tokens:\n$message", null, false)
             }
         }
 
@@ -107,17 +107,17 @@ class SvClone : Plugin() {
         val activity = Utils.appActivity ?: return
 
         AlertDialog.Builder(activity)
-            .setTitle("🔄 Clonagem Interrompida")
-            .setMessage("Detectamos uma clonagem em andamento do servidor '${state.serverName}' que foi interrompida.\n\nDeseja continuar de onde parou?")
-            .setPositiveButton("✅ Continuar") { dialog, _ ->
+            .setTitle("SVCLONER | LOST SESSION")
+            .setMessage("We detected ongoing cloning progress on the server '${state.serverName}' which was interrupted.\n\nDo you want to restore your session?")
+            .setPositiveButton("Restore session") { dialog, _ ->
                 dialog.dismiss()
                 CloneDialog.showWithProgress(context, state, settings)
                 CloneManager(context, DiscordApiClient(state.token)).execute(state)
             }
-            .setNegativeButton("❌ Descartar") { dialog, _ ->
+            .setNegativeButton("Discard session") { dialog, _ ->
                 ProgressStateManager.clearProgress(context)
                 dialog.dismiss()
-                Utils.showToast("Progresso descartado.", false)
+                Utils.showToast("Session cancelled.", false)
             }
             .setCancelable(false)
             .show()
@@ -143,11 +143,11 @@ class SvClone : Plugin() {
                     val guild = StoreStream.getGuilds().getGuild(guildId) ?: return@after
                     addCloneButton(actionsLayout, guild)
                 } catch (e: Exception) {
-                    logger.error("Erro ao adicionar botão no perfil:", e)
+                    logger.error("[ SVCLONER ] There was a small problem adding the clone button to the server profile: ", e)
                 }
             }
         } catch (e: Exception) {
-            logger.error("Erro ao aplicar patch:", e)
+            logger.error("[ SVCLONER ] Error applying patch: ", e)
         }
     }
 
@@ -156,7 +156,7 @@ class SvClone : Plugin() {
         val context = container.context
         val button = TextView(context, null, 0, R.i.UiKit_Settings_Item_Icon).apply {
             id = profileButtonId
-            text = "📋 Clonar Servidor"
+            text = "Clone Server"
             setTextColor(Color.WHITE)
             val pd = DimenUtils.dpToPx(16)
             setPadding(pd, pd, pd, pd)
@@ -174,7 +174,7 @@ class SvClone : Plugin() {
         try {
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(12345)
         } catch (e: Exception) {
-            logger.error("Erro ao limpar notificações:", e)
+            logger.error("[ SVCLONER ] Error clearing notifications: ", e)
         }
     }
 

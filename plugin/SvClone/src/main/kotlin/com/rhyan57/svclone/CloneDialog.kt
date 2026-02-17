@@ -54,7 +54,7 @@ object CloneDialog {
             }
 
             val titleView = TextView(activity).apply {
-                setText("📊 Progresso da Clonagem")
+                setText("Progress and console")
                 setTextColor(Color.WHITE)
                 textSize = 17f
                 setTypeface(null, Typeface.BOLD)
@@ -117,7 +117,7 @@ object CloneDialog {
                 .setCancelable(true)
                 .create()
 
-            dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "❌ Fechar") { d, _ ->
+            dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "CLOSE") { d, _ ->
                 CloneSession.onLog = null
                 CloneSession.onProgress = null
                 d.dismiss()
@@ -130,9 +130,9 @@ object CloneDialog {
                     logView.setText("${logView.text}\n\n$msg")
                     if (success) {
                         ProgressStateManager.clearProgress(activity)
-                        Utils.showToast("✅ Servidor clonado com sucesso!", false)
+                        Utils.showToast("✓ Server successfully cloned!", false)
                     } else {
-                        Utils.showToast("❌ Erro na clonagem", true)
+                        Utils.showToast("× An error occurred and it was not possible to clone the server. ", true)
                     }
                 }
             }
@@ -145,7 +145,7 @@ object CloneDialog {
                 )
                 logScrollView.post { logScrollView.fullScroll(ScrollView.FOCUS_DOWN) }
             } catch (e: Exception) {
-                Utils.showToast("Erro ao exibir progresso: ${e.message}", true)
+                Utils.showToast("An error occurred while displaying the progress GUI.  ${e.message}", true)
             }
         }
     }
@@ -240,7 +240,7 @@ object CloneDialog {
         }
 
         val titleView = TextView(ctx).apply {
-            setText("🔄 Clone Server")
+            setText("SvCloner | By rhyan57")
             setTextColor(Color.WHITE)
             textSize = 19f
             setTypeface(null, Typeface.BOLD)
@@ -248,9 +248,9 @@ object CloneDialog {
             setPadding(0, 0, 0, 4)
         }
 
-        val tokenField = editText("Token Discord", defaultToken, password = true)
-        val sourceField = editText("ID do servidor de origem", resumeState?.sourceGuildId ?: sourceGuildId)
-        val targetField = editText("ID do servidor destino (deixe vazio para criar novo)", resumeState?.targetGuildId ?: "")
+        val tokenField = editText("Discord Token", defaultToken, password = true)
+        val sourceField = editText("Source server ID", resumeState?.sourceGuildId ?: sourceGuildId)
+        val targetField = editText("Destination server ID (leave blank to create a new one)", resumeState?.targetGuildId ?: "")
 
         val sourcePreview = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -346,27 +346,27 @@ object CloneDialog {
 
         container.addView(titleView)
         container.addView(divider())
-        container.addView(sectionTitle("🔐 AUTENTICAÇÃO", false))
-        container.addView(label("TOKEN DISCORD"))
+        container.addView(sectionTitle("AUTH", false))
+        container.addView(label("DISCORD TOKEN"))
         container.addView(tokenField)
         container.addView(divider())
-        container.addView(sectionTitle("📊 SERVIDORES", false))
-        container.addView(label("SERVIDOR DE ORIGEM"))
+        container.addView(sectionTitle("SERVERS", false))
+        container.addView(label("ORIGINAL SERVER"))
         container.addView(sourceField)
         container.addView(sourcePreview)
-        container.addView(label("SERVIDOR DESTINO"))
+        container.addView(label("DESTINATION SERVER"))
         container.addView(targetField)
         container.addView(targetPreview)
         container.addView(divider())
 
         val basicSection = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val basicTitle = sectionTitle("⚙️ BÁSICO", true)
+        val basicTitle = sectionTitle("BASIC", true)
         var basicExpanded = true
-        val cbSettings  = checkBox("Configurações gerais", resumeState?.cloneSettings ?: true)
-        val cbIcon      = checkBox("Ícone do servidor", resumeState?.cloneIcon ?: true)
-        val cbBanner    = checkBox("Banner do servidor", resumeState?.cloneBanner ?: true)
-        val cbRoles     = checkBox("Cargos", resumeState?.cloneRoles ?: true)
-        val cbChannels  = checkBox("Canais e categorias", resumeState?.cloneChannels ?: true)
+        val cbSettings  = checkBox("General settings", resumeState?.cloneSettings ?: true)
+        val cbIcon      = checkBox("Server icon", resumeState?.cloneIcon ?: true)
+        val cbBanner    = checkBox("Server banner", resumeState?.cloneBanner ?: true)
+        val cbRoles     = checkBox("Roles", resumeState?.cloneRoles ?: true)
+        val cbChannels  = checkBox("Channels and categories", resumeState?.cloneChannels ?: true)
         basicSection.addView(cbSettings); basicSection.addView(cbIcon); basicSection.addView(cbBanner)
         basicSection.addView(cbRoles); basicSection.addView(cbChannels)
         basicTitle.setOnClickListener {
@@ -377,12 +377,12 @@ object CloneDialog {
         container.addView(basicTitle); container.addView(basicSection); container.addView(divider())
 
         val mediaSection = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val mediaTitle = sectionTitle("🎨 MÍDIA", true)
+        val mediaTitle = sectionTitle("MEDIA", true)
         var mediaExpanded = true
-        val cbEmojis    = checkBox("Emojis personalizados", resumeState?.cloneEmojis ?: true)
+        val cbEmojis    = checkBox("Custom emojis", resumeState?.cloneEmojis ?: true)
         val cbStickers  = checkBox("Stickers", resumeState?.cloneStickers ?: true)
-        val cbSounds    = checkBox("Sons de Soundboard", resumeState?.cloneSounds ?: true)
-        val cbSaveMidia = checkBox("Salvar mídia em ZIP", resumeState?.saveMidia ?: false)
+        val cbSounds    = checkBox("Soundboard Sounds", resumeState?.cloneSounds ?: true)
+        val cbSaveMidia = checkBox("Save media (emojis, server icons, etc.) to ZIP format.", resumeState?.saveMidia ?: false)
         mediaSection.addView(cbEmojis); mediaSection.addView(cbStickers)
         mediaSection.addView(cbSounds); mediaSection.addView(cbSaveMidia)
         mediaTitle.setOnClickListener {
@@ -393,16 +393,16 @@ object CloneDialog {
         container.addView(mediaTitle); container.addView(mediaSection); container.addView(divider())
 
         val messagesSection = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val messagesTitle = sectionTitle("💬 MENSAGENS", true)
+        val messagesTitle = sectionTitle("MESSAGES", true)
         var messagesExpanded = false
         messagesSection.visibility = View.GONE
-        val cbMessages  = checkBox("Clonar mensagens", resumeState?.cloneMessages ?: false)
-        val cbSystemMessages = checkBox("Incluir mensagens do sistema", resumeState?.cloneSystemMessages ?: false)
-        val cbReactions = checkBox("Clonar reações", resumeState?.cloneReactions ?: true)
-        val cbConvertMentions = checkBox("Converter menções (@cargos)", resumeState?.convertMentions ?: true)
-        val cbConvertEmojis = checkBox("Converter emojis customizados (requer Nitro)", resumeState?.convertCustomEmojis ?: false)
-        val cbConvertLinks = checkBox("Converter links de canais/mensagens", resumeState?.convertLinks ?: false)
-        val cbForumThreads = checkBox("Clonar threads de fóruns", resumeState?.cloneForumThreads ?: false)
+        val cbMessages  = checkBox("Clone messages", resumeState?.cloneMessages ?: false)
+        val cbSystemMessages = checkBox("Include system messages", resumeState?.cloneSystemMessages ?: false)
+        val cbReactions = checkBox("Cloning reactions", resumeState?.cloneReactions ?: true)
+        val cbConvertMentions = checkBox("Convert mentions (@positions)", resumeState?.convertMentions ?: true)
+        val cbConvertEmojis = checkBox("Convert custom emojis [requires Nitro]", resumeState?.convertCustomEmojis ?: false)
+        val cbConvertLinks = checkBox("Convert channel/message links", resumeState?.convertLinks ?: false)
+        val cbForumThreads = checkBox("Clone forum threads", resumeState?.cloneForumThreads ?: false)
         val messageLimitLayout = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(
@@ -410,7 +410,7 @@ object CloneDialog {
             ).apply { setMargins(0, 8, 0, 8) }
         }
         val messageLimitLabel = TextView(ctx).apply {
-            setText("Limite de mensagens: ")
+            setText("Limit of messages to be cloned [PER CHANNEL]: ")
             setTextColor(Color.parseColor("#B5BAC1")); textSize = 12f
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
@@ -422,7 +422,7 @@ object CloneDialog {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(8, 0, 0, 0) }
         }
         val messageLimitHint = TextView(ctx).apply {
-            setText("(-1 = ilimitado)")
+            setText("(-1 = ALL MESSAGES )")
             setTextColor(Color.parseColor("#80848E")); textSize = 10f
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(8, 0, 0, 0) }
         }
@@ -439,11 +439,11 @@ object CloneDialog {
         container.addView(messagesTitle); container.addView(messagesSection); container.addView(divider())
 
         val moderationSection = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val moderationTitle = sectionTitle("🛡️ MODERAÇÃO", true)
+        val moderationTitle = sectionTitle("MODERATION", true)
         var moderationExpanded = false
         moderationSection.visibility = View.GONE
-        val cbBans      = checkBox("Banimentos", resumeState?.cloneBans ?: false)
-        val cbAutoMod   = checkBox("AutoMod", resumeState?.cloneAutoMod ?: false)
+        val cbBans      = checkBox("Bans", resumeState?.cloneBans ?: false)
+        val cbAutoMod   = checkBox("AutoMod rules", resumeState?.cloneAutoMod ?: false)
         moderationSection.addView(cbBans); moderationSection.addView(cbAutoMod)
         moderationTitle.setOnClickListener {
             moderationExpanded = !moderationExpanded
@@ -453,7 +453,7 @@ object CloneDialog {
         container.addView(moderationTitle); container.addView(moderationSection); container.addView(divider())
 
         val communitySection = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val communityTitle = sectionTitle("🌟 COMUNIDADE", true)
+        val communityTitle = sectionTitle("COMMUNITY", true)
         var communityExpanded = false
         communitySection.visibility = View.GONE
         val cbEvents    = checkBox("Eventos", resumeState?.cloneEvents ?: false)
@@ -484,7 +484,7 @@ object CloneDialog {
             ).apply { setMargins(0, 0, 0, 8) }
         }
         val progressTitle = TextView(ctx).apply {
-            setText("📊 PROGRESSO")
+            setText("PROGRESS & CONSOLE")
             setTextColor(Color.parseColor("#5865F2")); textSize = 10f
             setTypeface(null, Typeface.BOLD); letterSpacing = 0.1f
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -534,9 +534,9 @@ object CloneDialog {
             .setCancelable(true)
             .create()
 
-        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "▶️ Iniciar") { _, _ -> }
-        dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "⬇️ Minimizar") { _, _ -> }
-        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "❌ Fechar") { d, _ ->
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "CLONE") { _, _ -> }
+        dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "MINIMIZE") { _, _ -> }
+        dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "CLOSE") { d, _ ->
             CloneSession.onLog = null
             CloneSession.onProgress = null
             d.dismiss()
@@ -556,7 +556,7 @@ object CloneDialog {
                 CloneSession.onLog = null
                 CloneSession.onProgress = null
                 dialog.dismiss()
-                Utils.showToast("Clonagem continua em background. Use /clone-progress para ver.", false)
+                Utils.showToast("Cloning continues in the background. Use /show-clone-progress to view it.", false)
             }
 
             positiveBtn.setOnClickListener {
@@ -564,11 +564,11 @@ object CloneDialog {
                 val srcId  = sourceField.text.toString().trim()
                 val dstId  = targetField.text.toString().trim()
 
-                if (token.isEmpty()) { Utils.showToast("Token obrigatório!", true); return@setOnClickListener }
-                if (srcId.isEmpty())  { Utils.showToast("ID de origem obrigatório!", true); return@setOnClickListener }
+                if (token.isEmpty()) { Utils.showToast("Token required!", true); return@setOnClickListener }
+                if (srcId.isEmpty())  { Utils.showToast("Source ID required!", true); return@setOnClickListener }
 
                 positiveBtn.isEnabled = false
-                positiveBtn.text = "⏳ Clonando..."
+                positiveBtn.text = "Cloning server..."
                 neutralBtn.isEnabled = true
                 progressContainer.visibility = View.VISIBLE
                 logView.setText("")
@@ -639,12 +639,12 @@ object CloneDialog {
                         progressLabel.setText(if (success) "100%" else "Erro")
                         logView.setText("${logView.text}\n\n$msg")
                         positiveBtn.isEnabled = true
-                        positiveBtn.text = "▶️ Iniciar"
+                        positiveBtn.text = "CLONE"
                         if (success) {
                             ProgressStateManager.clearProgress(ctx)
-                            Utils.showToast("✅ Servidor clonado com sucesso!", false)
+                            Utils.showToast("✓ Server successfully cloned!", false)
                         } else {
-                            Utils.showToast("❌ Erro na clonagem", true)
+                            Utils.showToast("× An error occurred and it was not possible to clone the server. ", true)
                         }
                     }
                 }
@@ -663,7 +663,7 @@ object CloneDialog {
                 (ctx.resources.displayMetrics.heightPixels * 0.9f).toInt()
             )
         } catch (e: Exception) {
-            Utils.showToast("Erro ao exibir dialogo: ${e.message}", true)
+            Utils.showToast("An error occurred: ${e.message}", true)
         }
     }
 }
