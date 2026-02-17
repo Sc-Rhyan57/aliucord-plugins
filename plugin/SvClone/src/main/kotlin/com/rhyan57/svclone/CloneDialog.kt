@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -55,9 +56,14 @@ object CloneDialog {
             inputType = if (password) InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT else InputType.TYPE_CLASS_TEXT
             setTextColor(Color.parseColor("#DBDEE1"))
             setHintTextColor(Color.parseColor("#4E5058"))
-            setBackgroundColor(Color.parseColor("#1E1F22"))
             setPadding(24, 18, 24, 18)
             textSize = 14f
+            
+            background = GradientDrawable().apply {
+                cornerRadius = 12f
+                setColor(Color.parseColor("#1E1F22"))
+            }
+            
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -76,9 +82,12 @@ object CloneDialog {
         }
 
         fun divider(): View = View(ctx).apply {
-            setBackgroundColor(Color.parseColor("#3B3D44"))
+            background = GradientDrawable().apply {
+                cornerRadius = 2f
+                setColor(Color.parseColor("#3B3D44"))
+            }
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 1
+                LinearLayout.LayoutParams.MATCH_PARENT, 2
             ).apply { setMargins(0, 18, 0, 18) }
         }
 
@@ -145,41 +154,103 @@ object CloneDialog {
         container.addView(cbStickers)
         container.addView(cbSaveMidia)
         container.addView(divider())
-        container.addView(sectionTitle("PROGRESSO"))
+
+        val progressContainer = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(16, 16, 16, 16)
+            visibility = View.GONE
+            
+            background = GradientDrawable().apply {
+                cornerRadius = 16f
+                setColor(Color.parseColor("#1E1F22"))
+            }
+            
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 16, 0, 16) }
+        }
+
+        val progressHeader = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(0, 0, 0, 8) }
+        }
+
+        val progressTitle = TextView(ctx).apply {
+            text = "PROGRESSO"
+            setTextColor(Color.parseColor("#5865F2"))
+            textSize = 11f
+            setTypeface(null, Typeface.BOLD)
+            letterSpacing = 0.08f
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+        }
+
+        val toggleButton = TextView(ctx).apply {
+            text = "[-]"
+            setTextColor(Color.parseColor("#5865F2"))
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            gravity = Gravity.CENTER
+            setPadding(16, 0, 16, 0)
+        }
+
+        progressHeader.addView(progressTitle)
+        progressHeader.addView(toggleButton)
 
         val progressBar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 100
             progress = 0
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 8, 0, 4) }
         }
 
         val progressLabel = TextView(ctx).apply {
-            text = ""
+            text = "0%"
             setTextColor(Color.parseColor("#80848E"))
             textSize = 12f
             gravity = Gravity.CENTER
-            visibility = View.GONE
+            setPadding(0, 8, 0, 0)
+        }
+
+        val logScrollView = ScrollView(ctx).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                400
+            ).apply { setMargins(0, 12, 0, 0) }
         }
 
         val logView = TextView(ctx).apply {
             text = ""
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 11f
-            setBackgroundColor(Color.parseColor("#1E1F22"))
             setPadding(16, 12, 16, 12)
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 300
-            ).apply { setMargins(0, 8, 0, 0) }
+            
+            background = GradientDrawable().apply {
+                cornerRadius = 8f
+                setColor(Color.parseColor("#0D0E10"))
+            }
         }
 
-        container.addView(progressBar)
-        container.addView(progressLabel)
-        container.addView(logView)
+        logScrollView.addView(logView)
+
+        var logsExpanded = true
+        toggleButton.setOnClickListener {
+            logsExpanded = !logsExpanded
+            logScrollView.visibility = if (logsExpanded) View.VISIBLE else View.GONE
+            toggleButton.text = if (logsExpanded) "[-]" else "[+]"
+        }
+
+        progressContainer.addView(progressHeader)
+        progressContainer.addView(progressBar)
+        progressContainer.addView(progressLabel)
+        progressContainer.addView(logScrollView)
+        
+        container.addView(progressContainer)
 
         resumeState?.let { targetField.setText(it.targetGuildId) }
 
@@ -206,9 +277,7 @@ object CloneDialog {
 
                 positiveBtn.isEnabled = false
                 positiveBtn.text = "Clonando..."
-                progressBar.visibility = View.VISIBLE
-                progressLabel.visibility = View.VISIBLE
-                logView.visibility = View.VISIBLE
+                progressContainer.visibility = View.VISIBLE
                 logView.text = ""
 
                 val state = ProgressState(
@@ -237,7 +306,12 @@ object CloneDialog {
                     ctx = ctx,
                     api = DiscordApiClient(token),
                     onLog = { msg ->
-                        Utils.mainThread.post { logView.text = "${logView.text}\n$msg" }
+                        Utils.mainThread.post { 
+                            logView.text = "${logView.text}\n$msg"
+                            logScrollView.post {
+                                logScrollView.fullScroll(ScrollView.FOCUS_DOWN)
+                            }
+                        }
                     },
                     onProgress = { progress ->
                         Utils.mainThread.post {

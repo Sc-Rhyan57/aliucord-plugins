@@ -1,7 +1,12 @@
 package com.rhyan57.svclone
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 import android.os.Environment
+import androidx.core.app.NotificationCompat
+import com.aliucord.Logger
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -19,33 +24,100 @@ class CloneManager(
     private val onProgress: (Float) -> Unit,
     private val onComplete: (Boolean, String) -> Unit
 ) {
+    
+    private val logger = Logger("SvClone")
+    private val notificationManager = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    private val channelId = "svclone_progress"
+    private val notificationId = 12345
+
+    init {
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "SvClone Progress",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Notificacoes de progresso da clonagem"
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun updateNotification(title: String, text: String, progress: Int) {
+        val notification = NotificationCompat.Builder(ctx, channelId)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setProgress(100, progress, false)
+            .setOngoing(true)
+            .build()
+        
+        notificationManager.notify(notificationId, notification)
+    }
+
+    private fun finishNotification(success: Boolean, message: String) {
+        val notification = NotificationCompat.Builder(ctx, channelId)
+            .setContentTitle(if (success) "Clonagem Concluida" else "Clonagem Falhou")
+            .setContentText(message)
+            .setSmallIcon(if (success) android.R.drawable.ic_dialog_info else android.R.drawable.ic_dialog_alert)
+            .setProgress(0, 0, false)
+            .setOngoing(false)
+            .build()
+        
+        notificationManager.notify(notificationId, notification)
+    }
 
     fun execute(state: ProgressState) {
         Thread {
             try {
-                val sourceGuild = api.getGuild(state.sourceGuildId) ?: run {
+                logger.info("Iniciando clonagem do servidor ${state.sourceGuildId}")
+                
+                val sourceGuild = api.getGuild(state.sourceGuildId)
+                if (sourceGuild == null) {
+                    logger.error("Falha ao obter dados do servidor de origem")
                     onComplete(false, "Nao foi possivel obter dados do servidor de origem.")
                     return@Thread
                 }
 
                 val serverName = sourceGuild.optString("name", "servidor")
+                logger.info("Nome do servidor: $serverName")
+                
                 val totalSteps = countSteps(state)
                 var currentStep = 0
 
                 fun tick(label: String) {
                     currentStep++
+                    val progress = currentStep.toFloat() / totalSteps.toFloat()
+                    val pct = (progress * 100).toInt()
+                    
+                    logger.info(label)
                     onLog(label)
-                    onProgress(currentStep.toFloat() / totalSteps.toFloat())
+                    onProgress(progress)
+                    updateNotification("Clonando: $serverName", label, pct)
                 }
 
                 val targetGuildId: String
                 if (state.targetGuildId.isEmpty()) {
                     onLog("Criando novo servidor...")
+                    logger.info("Criando novo servidor")
+                    
                     val newGuild = api.createGuild(sourceGuild.optString("name", "Servidor Clonado"))
-                        ?: run { onComplete(false, "Falha ao criar servidor destino."); return@Thread }
+                    if (newGuild == null) {
+                        logger.error("Falha ao criar servidor destino")
+                        finishNotification(false, "Falha ao criar servidor")
+                        onComplete(false, "Falha ao criar servidor destino.")
+                        return@Thread
+                    }
+                    
                     targetGuildId = newGuild.getString("id")
+                    logger.info("Servidor criado com ID: $targetGuildId")
                 } else {
                     targetGuildId = state.targetGuildId
+                    logger.info("Usando servidor destino existente: $targetGuildId")
                 }
 
                 val updatedState = state.copy(targetGuildId = targetGuildId, serverName = serverName)
@@ -55,6 +127,8 @@ class CloneManager(
 
                 if (state.cloneSettings && !state.settingsCloned) {
                     onLog("Clonando configuracoes do servidor...")
+                    logger.info("Clonando configuracoes")
+                    
                     val settingsBody = JSONObject()
                     sourceGuild.optString("name").takeIf { it.isNotEmpty() }?.let { settingsBody.put("name", it) }
                     sourceGuild.optString("description").takeIf { it.isNotEmpty() }?.let { settingsBody.put("description", it) }
@@ -71,6 +145,8 @@ class CloneManager(
                     val iconHash = sourceGuild.optString("icon")
                     if (iconHash.isNotEmpty() && iconHash != "null") {
                         onLog("Baixando icone do servidor...")
+                        logger.info("Baixando icone: $iconHash")
+                        
                         val animated = iconHash.startsWith("a_")
                         val ext = if (animated) "gif" else "png"
                         val url = "https://cdn.discordapp.com/icons/${state.sourceGuildId}/$iconHash.$ext?size=4096"
@@ -83,6 +159,7 @@ class CloneManager(
                             mediaBytesMap["icon.$ext"] = Pair(bytes, mime)
                             tick("Icone clonado")
                         } else {
+                            logger.warn("Falha ao baixar icone")
                             tick("Icone: falhou ao baixar")
                         }
                     }
@@ -93,6 +170,8 @@ class CloneManager(
                     val bannerHash = sourceGuild.optString("banner")
                     if (bannerHash.isNotEmpty() && bannerHash != "null") {
                         onLog("Baixando banner do servidor...")
+                        logger.info("Baixando banner: $bannerHash")
+                        
                         val animated = bannerHash.startsWith("a_")
                         val ext = if (animated) "gif" else "png"
                         val url = "https://cdn.discordapp.com/banners/${state.sourceGuildId}/$bannerHash.$ext?size=4096"
@@ -105,6 +184,7 @@ class CloneManager(
                             mediaBytesMap["banner.$ext"] = Pair(bytes, mime)
                             tick("Banner clonado")
                         } else {
+                            logger.warn("Falha ao baixar banner")
                             tick("Banner: falhou ao baixar")
                         }
                     }
@@ -115,11 +195,19 @@ class CloneManager(
 
                 if (state.cloneRoles && !state.rolesCloned) {
                     onLog("Clonando cargos...")
+                    logger.info("Clonando cargos")
+                    
                     val roles = api.getRoles(state.sourceGuildId)
-                    val sortedRoles = (0 until roles.length())
-                        .map { roles.getJSONObject(it) }
+                    val rolesList = mutableListOf<JSONObject>()
+                    for (i in 0 until roles.length()) {
+                        rolesList.add(roles.getJSONObject(i))
+                    }
+                    
+                    val sortedRoles = rolesList
                         .filter { !it.optBoolean("managed", false) && it.optString("name") != "@everyone" }
                         .sortedBy { it.optInt("position", 0) }
+
+                    logger.info("Total de cargos a clonar: ${sortedRoles.size}")
 
                     for (role in sortedRoles) {
                         val roleBody = JSONObject().apply {
@@ -141,13 +229,24 @@ class CloneManager(
 
                 if (state.cloneChannels && !state.channelsCloned) {
                     onLog("Clonando canais...")
+                    logger.info("Clonando canais")
+                    
                     val channels = api.getChannels(state.sourceGuildId)
-                    val channelList = (0 until channels.length()).map { channels.getJSONObject(it) }
+                    val channelList = mutableListOf<JSONObject>()
+                    for (i in 0 until channels.length()) {
+                        channelList.add(channels.getJSONObject(i))
+                    }
+
+                    logger.info("Total de canais: ${channelList.size}")
 
                     val existingChannels = api.getChannels(targetGuildId)
                     for (i in 0 until existingChannels.length()) {
                         val ch = existingChannels.getJSONObject(i)
-                        try { api.deleteDefaultChannel(targetGuildId, ch.getString("id")) } catch (e: Exception) {}
+                        try { 
+                            api.deleteDefaultChannel(targetGuildId, ch.getString("id"))
+                        } catch (e: Exception) {
+                            logger.warn("Erro ao deletar canal padrao: ${e.message}")
+                        }
                         Thread.sleep(200)
                     }
 
@@ -181,6 +280,8 @@ class CloneManager(
 
                 if (state.cloneEmojis && !state.emojisCloned) {
                     onLog("Clonando emojis...")
+                    logger.info("Clonando emojis")
+                    
                     val emojis = api.getEmojis(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until emojis.length()) {
@@ -206,6 +307,8 @@ class CloneManager(
 
                 if (state.cloneStickers && !state.stickersCloned) {
                     onLog("Clonando stickers...")
+                    logger.info("Clonando stickers")
+                    
                     val stickers = api.getStickers(state.sourceGuildId)
                     var count = 0
                     for (i in 0 until stickers.length()) {
@@ -232,14 +335,19 @@ class CloneManager(
 
                 if (state.saveMidia && mediaBytesMap.isNotEmpty()) {
                     onLog("Salvando midia no ZIP...")
+                    logger.info("Salvando ${mediaBytesMap.size} arquivos de midia")
                     saveMidiaZip(serverName, mediaBytesMap)
                     tick("Midia salva")
                 }
 
                 ProgressStateManager.saveProgress(ctx, updatedState.copy(isComplete = true))
+                logger.info("Clonagem concluida com sucesso!")
+                finishNotification(true, "Servidor $serverName clonado!")
                 onComplete(true, "Servidor clonado com sucesso! ID do novo servidor: $targetGuildId")
 
             } catch (e: Exception) {
+                logger.error("Erro durante clonagem", e)
+                finishNotification(false, "Erro: ${e.message}")
                 onComplete(false, "Erro: ${e.message}")
             }
         }.start()
@@ -291,7 +399,9 @@ class CloneManager(
             try {
                 api.modifyChannelPermissions(newChannelId, targetId, owBody)
                 Thread.sleep(200)
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                logger.warn("Erro ao aplicar permissoes: ${e.message}")
+            }
         }
     }
 
@@ -311,8 +421,10 @@ class CloneManager(
                     zos.closeEntry()
                 }
             }
+            logger.info("ZIP salvo: ${zipFile.absolutePath}")
             onLog("ZIP salvo em: ${zipFile.absolutePath}")
         } catch (e: Exception) {
+            logger.error("Erro ao salvar ZIP", e)
             onLog("Erro ao salvar ZIP: ${e.message}")
         }
     }

@@ -37,10 +37,12 @@ class DiscordApiClient(private val token: String) {
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.readText() ?: ""
-            if (code == 204) null
-            else if (text.isEmpty()) null
-            else if (text.startsWith("[")) JSONObject().put("array", JSONArray(text))
-            else JSONObject(text)
+            when {
+                code == 204 -> null
+                text.isEmpty() -> null
+                text.startsWith("[") -> JSONObject().put("array", JSONArray(text))
+                else -> JSONObject(text)
+            }
         } catch (e: Exception) {
             null
         } finally {
@@ -93,26 +95,6 @@ class DiscordApiClient(private val token: String) {
 
     fun createRole(guildId: String, role: JSONObject): JSONObject? =
         request("POST", "/guilds/$guildId/roles", role)
-
-    fun modifyRolePositions(guildId: String, positions: JSONArray): JSONArray {
-        Thread.sleep(DELAY_MS)
-        val conn = URL("$BASE/guilds/$guildId/roles").openConnection() as HttpURLConnection
-        return try {
-            conn.requestMethod = "PATCH"
-            conn.setRequestProperty("Authorization", token)
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.setRequestProperty("User-Agent", "SvClone/1.0")
-            conn.doOutput = true
-            val bytes = positions.toString().toByteArray(Charsets.UTF_8)
-            conn.outputStream.use { it.write(bytes) }
-            val text = conn.inputStream.bufferedReader().readText()
-            JSONArray(text)
-        } catch (e: Exception) {
-            JSONArray()
-        } finally {
-            conn.disconnect()
-        }
-    }
 
     fun deleteDefaultChannel(guildId: String, channelId: String) {
         request("DELETE", "/channels/$channelId")
@@ -197,15 +179,5 @@ class DiscordApiClient(private val token: String) {
     fun bytesToBase64DataUrl(bytes: ByteArray, mimeType: String): String {
         val b64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
         return "data:$mimeType;base64,$b64"
-    }
-
-    fun guessMime(url: String): String {
-        return when {
-            url.contains(".gif") -> "image/gif"
-            url.contains(".png") -> "image/png"
-            url.contains(".jpg") || url.contains(".jpeg") -> "image/jpeg"
-            url.contains(".webp") -> "image/webp"
-            else -> "image/png"
-        }
     }
 }
