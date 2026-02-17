@@ -55,7 +55,7 @@ object CloneDialog {
         rootScroll.addView(container)
 
         fun label(text: String): TextView = TextView(ctx).apply {
-            this.text = text
+            setText(text)
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 10f
             setTypeface(null, Typeface.BOLD)
@@ -84,7 +84,7 @@ object CloneDialog {
         }
 
         fun checkBox(text: String, checked: Boolean = true): CheckBox = CheckBox(ctx).apply {
-            this.text = text
+            setText(text)
             isChecked = checked
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 12f
@@ -116,7 +116,7 @@ object CloneDialog {
             }
             
             val titleText = TextView(ctx).apply {
-                this.text = text
+                setText(text)
                 setTextColor(Color.parseColor("#5865F2"))
                 textSize = 11f
                 setTypeface(null, Typeface.BOLD)
@@ -132,7 +132,7 @@ object CloneDialog {
             
             if (expandable) {
                 val arrow = TextView(ctx).apply {
-                    text = "▼"
+                    setText("▼")
                     setTextColor(Color.parseColor("#5865F2"))
                     textSize = 12f
                     gravity = Gravity.CENTER
@@ -145,7 +145,7 @@ object CloneDialog {
         }
 
         val titleView = TextView(ctx).apply {
-            text = "🔄 Clone Server"
+            setText("🔄 Clone Server")
             setTextColor(Color.parseColor("#FFFFFF"))
             textSize = 19f
             setTypeface(null, Typeface.BOLD)
@@ -187,14 +187,14 @@ object CloneDialog {
         }
         
         val sourceName = TextView(ctx).apply {
-            text = ""
+            setText("")
             setTextColor(Color.parseColor("#FFFFFF"))
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
         }
         
         val sourceMemberCount = TextView(ctx).apply {
-            text = ""
+            setText("")
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 11f
         }
@@ -234,14 +234,14 @@ object CloneDialog {
         }
         
         val targetName = TextView(ctx).apply {
-            text = ""
+            setText("")
             setTextColor(Color.parseColor("#FFFFFF"))
             textSize = 14f
             setTypeface(null, Typeface.BOLD)
         }
         
         val targetMemberCount = TextView(ctx).apply {
-            text = ""
+            setText("")
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 11f
         }
@@ -264,16 +264,16 @@ object CloneDialog {
                     if (guild != null) {
                         Utils.mainThread.post {
                             if (isSource) {
-                                sourceName.text = guild.name
-                                sourceMemberCount.text = "${guild.memberCount} membros"
+                                sourceName.setText(guild.name)
+                                sourceMemberCount.setText("${guild.memberCount} membros")
                                 val iconUrl = IconUtils.getForGuild(guild)
                                 if (iconUrl != null) {
                                     MGImages.setImage(sourceIcon, iconUrl)
                                 }
                                 sourcePreview.visibility = View.VISIBLE
                             } else {
-                                targetName.text = guild.name
-                                targetMemberCount.text = "${guild.memberCount} membros"
+                                targetName.setText(guild.name)
+                                targetMemberCount.setText("${guild.memberCount} membros")
                                 val iconUrl = IconUtils.getForGuild(guild)
                                 if (iconUrl != null) {
                                     MGImages.setImage(targetIcon, iconUrl)
@@ -343,7 +343,7 @@ object CloneDialog {
         basicTitle.setOnClickListener {
             basicExpanded = !basicExpanded
             basicSection.visibility = if (basicExpanded) View.VISIBLE else View.GONE
-            (basicTitle.getChildAt(1) as? TextView)?.text = if (basicExpanded) "▼" else "▶"
+            (basicTitle.getChildAt(1) as? TextView)?.setText(if (basicExpanded) "▼" else "▶")
         }
         
         container.addView(basicTitle)
@@ -369,7 +369,7 @@ object CloneDialog {
         mediaTitle.setOnClickListener {
             mediaExpanded = !mediaExpanded
             mediaSection.visibility = if (mediaExpanded) View.VISIBLE else View.GONE
-            (mediaTitle.getChildAt(1) as? TextView)?.text = if (mediaExpanded) "▼" else "▶"
+            (mediaTitle.getChildAt(1) as? TextView)?.setText(if (mediaExpanded) "▼" else "▶")
         }
         
         container.addView(mediaTitle)
@@ -400,7 +400,7 @@ object CloneDialog {
         }
         
         val messageLimitLabel = TextView(ctx).apply {
-            text = "Limite de mensagens: "
+            setText("Limite de mensagens: ")
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 12f
             layoutParams = LinearLayout.LayoutParams(
@@ -427,7 +427,7 @@ object CloneDialog {
         }
         
         val messageLimitHint = TextView(ctx).apply {
-            text = "(-1 = ilimitado)"
+            setText("(-1 = ilimitado)")
             setTextColor(Color.parseColor("#80848E"))
             textSize = 10f
             layoutParams = LinearLayout.LayoutParams(
@@ -452,7 +452,7 @@ object CloneDialog {
         messagesTitle.setOnClickListener {
             messagesExpanded = !messagesExpanded
             messagesSection.visibility = if (messagesExpanded) View.VISIBLE else View.GONE
-            (messagesTitle.getChildAt(1) as? TextView)?.text = if (messagesExpanded) "▼" else "▶"
+            (messagesTitle.getChildAt(1) as? TextView)?.setText(if (messagesExpanded) "▼" else "▶")
         }
         
         container.addView(messagesTitle)
@@ -475,7 +475,7 @@ object CloneDialog {
         moderationTitle.setOnClickListener {
             moderationExpanded = !moderationExpanded
             moderationSection.visibility = if (moderationExpanded) View.VISIBLE else View.GONE
-            (moderationTitle.getChildAt(1) as? TextView)?.text = if (moderationExpanded) "▼" else "▶"
+            (moderationTitle.getChildAt(1) as? TextView)?.setText(if (moderationExpanded) "▼" else "▶")
         }
         
         container.addView(moderationTitle)
@@ -500,7 +500,7 @@ object CloneDialog {
         communityTitle.setOnClickListener {
             communityExpanded = !communityExpanded
             communitySection.visibility = if (communityExpanded) View.VISIBLE else View.GONE
-            (communityTitle.getChildAt(1) as? TextView)?.text = if (communityExpanded) "▼" else "▶"
+            (communityTitle.getChildAt(1) as? TextView)?.setText(if (communityExpanded) "▼" else "▶")
         }
         
         container.addView(communityTitle)
@@ -532,7 +532,7 @@ object CloneDialog {
         }
 
         val progressTitle = TextView(ctx).apply {
-            text = "📊 PROGRESSO"
+            setText("📊 PROGRESSO")
             setTextColor(Color.parseColor("#5865F2"))
             textSize = 10f
             setTypeface(null, Typeface.BOLD)
@@ -545,7 +545,7 @@ object CloneDialog {
         }
 
         val toggleButton = TextView(ctx).apply {
-            text = "▼"
+            setText("▼")
             setTextColor(Color.parseColor("#5865F2"))
             textSize = 12f
             gravity = Gravity.CENTER
@@ -561,7 +561,7 @@ object CloneDialog {
         }
 
         val progressLabel = TextView(ctx).apply {
-            text = "0%"
+            setText("0%")
             setTextColor(Color.parseColor("#80848E"))
             textSize = 11f
             gravity = Gravity.CENTER
@@ -576,7 +576,7 @@ object CloneDialog {
         }
 
         val logView = TextView(ctx).apply {
-            text = ""
+            setText("")
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 10f
             setPadding(10, 10, 10, 10)
@@ -593,7 +593,7 @@ object CloneDialog {
         toggleButton.setOnClickListener {
             logsExpanded = !logsExpanded
             logScrollView.visibility = if (logsExpanded) View.VISIBLE else View.GONE
-            toggleButton.text = if (logsExpanded) "▼" else "▶"
+            toggleButton.setText(if (logsExpanded) "▼" else "▶")
         }
 
         progressContainer.addView(progressHeader)
@@ -654,7 +654,7 @@ object CloneDialog {
                 positiveBtn.text = "⏳ Clonando..."
                 neutralBtn.isEnabled = false
                 progressContainer.visibility = View.VISIBLE
-                logView.text = ""
+                logView.setText("")
 
                 val messageLimit = try {
                     messageLimitField.text.toString().toInt()
@@ -710,7 +710,7 @@ object CloneDialog {
                     api = DiscordApiClient(token),
                     onLog = { msg ->
                         Utils.mainThread.post { 
-                            logView.text = "${logView.text}\n$msg"
+                            logView.setText("${logView.text}\n$msg")
                             logScrollView.post {
                                 logScrollView.fullScroll(ScrollView.FOCUS_DOWN)
                             }
@@ -720,14 +720,14 @@ object CloneDialog {
                         Utils.mainThread.post {
                             val pct = (progress * 100).toInt().coerceIn(0, 100)
                             progressBar.progress = pct
-                            progressLabel.text = "$pct%"
+                            progressLabel.setText("$pct%")
                         }
                     },
                     onComplete = { success, msg ->
                         Utils.mainThread.post {
                             progressBar.progress = if (success) 100 else progressBar.progress
-                            progressLabel.text = if (success) "100%" else "Erro"
-                            logView.text = "${logView.text}\n\n$msg"
+                            progressLabel.setText(if (success) "100%" else "Erro")
+                            logView.setText("${logView.text}\n\n$msg")
                             positiveBtn.isEnabled = true
                             positiveBtn.text = "▶️ Iniciar"
                             neutralBtn.isEnabled = true

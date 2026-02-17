@@ -88,9 +88,9 @@ class SvClone : Plugin() {
         try {
             patcher.after<WidgetGuildProfileSheet>(
                 "configureTabItems",
-                Long::class.javaPrimitiveType,
+                Long::class.javaPrimitiveType!!,
                 WidgetGuildProfileSheetViewModel.TabItems::class.java,
-                Boolean::class.javaPrimitiveType
+                Boolean::class.javaPrimitiveType!!
             ) { param ->
                 try {
                     val sheet = param.thisObject as? WidgetGuildProfileSheet ?: return@after
@@ -129,7 +129,7 @@ class SvClone : Plugin() {
             id = profileButtonId
             text = "📋 Clonar Servidor"
             setTextColor(Color.WHITE)
-            val pd = DimenUtils.getDefaultPadding()
+            val pd = DimenUtils.dpToPx(16)
             setPadding(pd, pd, pd, pd)
             typeface = ResourcesCompat.getFont(context, Constants.Fonts.whitney_semibold)
             
