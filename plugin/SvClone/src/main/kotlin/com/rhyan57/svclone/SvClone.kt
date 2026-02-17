@@ -15,6 +15,7 @@ import com.aliucord.entities.Plugin
 import com.aliucord.patcher.Hook
 import com.discord.api.commands.ApplicationCommandType
 import com.discord.stores.StoreStream
+import com.discord.utilities.rest.RestAPI
 import com.discord.widgets.guilds.profile.WidgetGuildProfileSheet
 
 @AliucordPlugin
@@ -41,11 +42,13 @@ class SvClone : Plugin() {
             )
         ) { ctx2 ->
             val guildId = ctx2.getRequiredString("server_id")
-            val token = ctx2.getString("token")
-                ?: StoreStream.getAuthentication().authTokens?.token
-                ?: return@registerCommand CommandResult(
+            val token = try {
+                ctx2.getString("token") ?: RestAPI.AppHeadersProvider.INSTANCE.authToken
+            } catch (e: Exception) {
+                return@registerCommand CommandResult(
                     "Nao foi possivel obter seu token. Informe manualmente.", null, false
                 )
+            }
 
             Utils.threadPool.execute {
                 CloneDialog.show(ctx, guildId, token)
@@ -72,7 +75,11 @@ class SvClone : Plugin() {
                     StoreStream.getGuildSelected().selectedGuildId
                 }
 
-                val token = StoreStream.getAuthentication().authTokens?.token ?: ""
+                val token = try {
+                    RestAPI.AppHeadersProvider.INSTANCE.authToken
+                } catch (e: Exception) {
+                    ""
+                }
 
                 val btnContainer = LinearLayout(ctx).apply {
                     orientation = LinearLayout.VERTICAL
