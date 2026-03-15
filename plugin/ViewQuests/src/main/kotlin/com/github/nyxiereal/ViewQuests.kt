@@ -17,6 +17,7 @@ import com.aliucord.Utils
 import com.aliucord.annotations.AliucordPlugin
 import com.aliucord.entities.Plugin
 import com.aliucord.patcher.Hook
+import com.aliucord.utils.DimenUtils
 import com.discord.widgets.settings.WidgetSettings
 import com.lytefast.flexinput.R
 import com.github.nyxiereal.viewquests.*
@@ -38,7 +39,7 @@ class ViewQuests : Plugin() {
 
                 val orbBalanceView = TextView(ctx, null, 0, R.i.UiKit_Settings_Item_SubText).apply {
                     text = "Orbs: ..."
-                    setPadding(Utils.dpToPx(16), Utils.dpToPx(4), Utils.dpToPx(16), Utils.dpToPx(4))
+                    setPadding(DimenUtils.dpToPx(16), DimenUtils.dpToPx(4), DimenUtils.dpToPx(16), DimenUtils.dpToPx(4))
                     layout.addView(this, baseIndex + 1)
                 }
 
