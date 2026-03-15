@@ -65,14 +65,26 @@ object QuestApi {
         return try { JSONObject(body).optInt("balance", 0) } catch (_: Exception) { 0 }
     }
 
-    fun enrollQuest(questId: String): JSONObject {
-        val body = JSONObject().put("location_context", JSONObject()
-            .put("guild_id", "0")
-            .put("channel_id", "0")
-            .put("channel_type", "0")
-        ).put("platform", 0).toString()
-        val (_, resp) = doPost("/quests/$questId/enroll", body)
-        return try { JSONObject(resp) } catch (_: Exception) { JSONObject() }
+    fun enrollQuest(questId: String): String? {
+        val body = JSONObject()
+            .put("location_context", JSONObject()
+                .put("guild_id", "0")
+                .put("channel_id", "0")
+                .put("channel_type", "0"))
+            .toString()
+        val (code, resp) = doPost("/quests/$questId/enroll", body)
+        return try {
+            if (code in 200..299) {
+                val j = JSONObject(resp)
+                j.optString("enrolled_at").takeIf { it.isNotEmpty() && it != "null" }
+                    ?: j.optJSONObject("user_status")?.optString("enrolled_at")?.takeIf { it.isNotEmpty() && it != "null" }
+            } else null
+        } catch (_: Exception) { null }
+    }
+
+    fun getQuestStatus(questId: String): JSONObject {
+        val (_, body) = doGet("/quests/@me/$questId")
+        return try { JSONObject(body) } catch (_: Exception) { JSONObject() }
     }
 
     fun sendVideoProgress(questId: String, timestamp: Double): JSONObject {
@@ -109,6 +121,14 @@ object QuestApi {
         val cfg = rawQuestJson.optJSONObject("config") ?: return null
         val assets = cfg.optJSONObject("assets")
         if (assets != null) {
+            for (key in listOf("quest_bar_video", "video", "promo_video", "hero_video", "video_asset")) {
+                val v = assets.optString(key, "").takeIf { it.isNotEmpty() && it != "null" } ?: continue
+                return when {
+                    v.startsWith("http") -> v
+                    v.startsWith("quests/") -> "https://cdn.discordapp.com/$v"
+                    else -> "https://cdn.discordapp.com/quests/$questId/$v"
+                }
+            }
             for (key in assets.keys()) {
                 val v = assets.optString(key, "")
                 if (v.contains(".mp4") || v.contains(".m3u8") || v.contains(".webm")) {
@@ -119,19 +139,9 @@ object QuestApi {
                     }
                 }
             }
-            for (key in listOf("quest_bar_video", "video", "promo_video", "hero_video")) {
-                val v = assets.optString(key, "").takeIf { it.isNotEmpty() && it != "null" } ?: continue
-                return when {
-                    v.startsWith("http") -> v
-                    v.startsWith("quests/") -> "https://cdn.discordapp.com/$v"
-                    else -> "https://cdn.discordapp.com/quests/$questId/$v"
-                }
-            }
         }
         val appId = cfg.optJSONObject("application")?.optString("id")?.takeIf { it.isNotEmpty() && it != "null" }
-        if (appId != null) {
-            return "https://cdn.discordapp.com/quests/$questId/${appId}_mx480.m3u8"
-        }
-        return null
+            ?: return null
+        return "https://cdn.discordapp.com/quests/$questId/${appId}_mx480.m3u8"
     }
 }
