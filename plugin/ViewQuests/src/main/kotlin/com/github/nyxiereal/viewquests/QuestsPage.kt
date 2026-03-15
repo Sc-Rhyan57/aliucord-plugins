@@ -875,7 +875,7 @@ class QuestsPage : SettingsPage() {
         var enrolled = quest.userStatus?.enrolledAt != null
         var dialog: AlertDialog? = null
 
-        val videoUrl = quest.rawJson?.let { QuestApi.extractVideoUrl(questId, it) }
+        val videoUrl: String? = quest.rawJson?.let { raw -> QuestApi.extractVideoUrl(questId, raw) }
 
         if (videoUrl != null) {
             videoView.setVideoURI(Uri.parse(videoUrl))
