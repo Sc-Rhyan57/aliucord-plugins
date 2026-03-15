@@ -204,8 +204,8 @@ class QuestsPage : SettingsPage() {
         divider(ctx).apply { c.addView(this) }
 
         cfg.taskConfig.tasks.entries.forEach { (name, task) ->
-            val progress = us?.progress?.get(name)
-            val done = progress?.value ?: 0
+            val taskProgress = us?.progress?.get(name)
+            val done = taskProgress?.value ?: 0
             val total = task.target
             val desc = describeTask(name, task)
             val pct = if (total > 0) (done * 100 / total).coerceIn(0, 100) else 0
@@ -217,7 +217,7 @@ class QuestsPage : SettingsPage() {
                 setPadding(DimenUtils.dpToPx(16), DimenUtils.dpToPx(4), DimenUtils.dpToPx(16), DimenUtils.dpToPx(4))
                 val bar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
                     max = 100
-                    progress = pct
+                    this.progress = pct
                     layoutParams = LinearLayout.LayoutParams(0, DimenUtils.dpToPx(6), 1f).apply {
                         setMargins(0, DimenUtils.dpToPx(8), DimenUtils.dpToPx(8), 0)
                     }
