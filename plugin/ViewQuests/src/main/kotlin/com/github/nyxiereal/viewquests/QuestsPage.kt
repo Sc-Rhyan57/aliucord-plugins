@@ -640,7 +640,7 @@ class QuestsPage : SettingsPage() {
         })
         root.addView(TextView(ctx).apply {
             text = "This will spoof progress to complete: ${quest.config.messages.questName}\n\nEstimated time: ${fmtSecs(target)}\n\nThis may violate Discord ToS. Continue?"
-            setTextColor(Color.parseColor("#B5BAC1")); textSize = 13f; lineSpacingMultiplier = 1.4f
+            setTextColor(Color.parseColor("#B5BAC1")); textSize = 13f; setLineSpacing(0f, 1.4f)
             setPadding(0, 0, 0, DimenUtils.dpToPx(20))
         })
         val btnRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
