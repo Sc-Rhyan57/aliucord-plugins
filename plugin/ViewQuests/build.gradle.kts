@@ -4,6 +4,7 @@ description = "View, complete and claim Discord Quests with Orb balance display"
 
 aliucord {
     author("rhyan57", 896604349311115304L)
+    author("nyxiereal", 1242567443742986373L)
     changelog.set("""
         # 2.0.0:
         - Complete rewrite
