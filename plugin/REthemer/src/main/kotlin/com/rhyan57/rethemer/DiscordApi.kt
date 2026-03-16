@@ -28,9 +28,37 @@ object DiscordApi {
 
     fun hasNitro(): Boolean {
         return try {
-            StoreStream.getUsers().me.premiumType > 0
+            val me = StoreStream.getUsers().me
+            val premiumType = try {
+                val field = me.javaClass.getDeclaredField("premiumType")
+                field.isAccessible = true
+                (field.get(me) as? Int) ?: 0
+            } catch (_: Exception) {
+                try {
+                    val field = me.javaClass.getDeclaredField("f")
+                    field.isAccessible = true
+                    (field.get(me) as? Int) ?: 0
+                } catch (_: Exception) { 0 }
+            }
+            log.info("hasNitro: premiumType=$premiumType")
+            premiumType > 0
         } catch (e: Exception) {
-            log.error("hasNitro failed", e)
+            log.error("hasNitro failed, falling back to API", e)
+            hasNitroViaApi()
+        }
+    }
+
+    private fun hasNitroViaApi(): Boolean {
+        return try {
+            val req = headers(Http.Request.newDiscordRNRequest("/users/@me", "GET"))
+            val res = req.execute()
+            if (res.statusCode !in 200..299) return false
+            val json = try { res.json(JSONObject::class.java) } catch (_: Exception) { return false }
+            val premiumType = json.optInt("premium_type", 0)
+            log.info("hasNitroViaApi: premium_type=$premiumType")
+            premiumType > 0
+        } catch (e: Exception) {
+            log.error("hasNitroViaApi exception", e)
             false
         }
     }
