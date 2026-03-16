@@ -3,62 +3,68 @@ package com.rhyan57.rethemer
 import com.aliucord.Http
 import com.aliucord.Logger
 import com.discord.stores.StoreStream
-import com.discord.utilities.rest.RestAPI
 import org.json.JSONArray
 import org.json.JSONObject
 
 object DiscordApi {
     private val log = Logger("REthemer/API")
 
-    private val superProps = "eyJvcyI6IkFuZHJvaWQiLCJicm93c2VyIjoiQW5kcm9pZCBNb2JpbGUiLCJkZXZpY2UiOiJBbmRyb2lkIiwic3lzdGVtX2xvY2FsZSI6InB0LUJSIiwiaGFzX2NsaWVudF9tb2RzIjpmYWxzZSwiYnJvd3Nlcl91c2VyX2FnZW50IjoiTW96aWxsYS81LjAgKEFuZHJvaWQgMTI7IE1vYmlsZTsgcnY6MTQ4LjApIEdlY2tvLzE0OC4wIEZpcmVmb3gvMTQ4LjAiLCJicm93c2VyX3ZlcnNpb24iOiIxNDguMCIsIm9zX3ZlcnNpb24iOiIxMiIsInJlZmVycmVyIjoiIiwicmVmZXJyaW5nX2RvbWFpbiI6IiIsInJlZmVycmVyX2N1cnJlbnQiOiIiLCJyZWZlcnJpbmdfZG9tYWluX2N1cnJlbnQiOiIiLCJyZWxlYXNlX2NoYW5uZWwiOiJzdGFibGUiLCJjbGllbnRfYnVpbGRfbnVtYmVyIjo1MTA3MzMsImNsaWVudF9ldmVudF9zb3VyY2UiOm51bGx9"
-
-    private fun getAuthToken(): String? {
+    fun hasNitro(): Boolean {
         return try {
-            RestAPI.AppHeadersProvider.INSTANCE.authToken
+            val me = StoreStream.getUsers().me
+            var premiumType = 0
+            for (field in me.javaClass.declaredFields + me.javaClass.superclass?.declaredFields.orEmpty()) {
+                if (field.name == "premiumType" || field.name == "premium_type") {
+                    field.isAccessible = true
+                    premiumType = (field.get(me) as? Int) ?: 0
+                    break
+                }
+            }
+            if (premiumType == 0) {
+                for (method in me.javaClass.methods + me.javaClass.declaredMethods) {
+                    if (method.name.lowercase().contains("premium") && method.parameterCount == 0) {
+                        method.isAccessible = true
+                        val v = method.invoke(me)
+                        if (v is Int && v > 0) { log.info("hasNitro via method ${method.name}: $v"); return true }
+                        if (v is Boolean && v) { log.info("hasNitro via method ${method.name}: true"); return true }
+                    }
+                }
+                log.info("hasNitro: premiumType field not found directly, trying API fallback")
+                return hasNitroViaApi()
+            }
+            log.info("hasNitro: premiumType=$premiumType")
+            premiumType > 0
         } catch (e: Exception) {
-            log.error("getAuthToken failed", e)
-            null
+            log.error("hasNitro local failed, trying API", e)
+            hasNitroViaApi()
         }
     }
 
-    private fun headers(req: Http.Request): Http.Request {
-        req.setHeader("X-Super-Properties", superProps)
-        req.setHeader("X-Discord-Locale", "pt-BR")
-        req.setHeader("X-Discord-Timezone", "America/Sao_Paulo")
-        req.setHeader("X-Debug-Options", "bugReporterEnabled")
-        req.setHeader("Referer", "https://discord.com/channels/@me")
-        return req
-    }
-
-    private fun Http.Request.writeBody(body: String) {
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        conn.doOutput = true
-        conn.outputStream.write(bytes)
-    }
-
-    fun hasNitro(): Boolean {
+    private fun hasNitroViaApi(): Boolean {
         return try {
-            val token = getAuthToken() ?: return false
             val req = Http.Request.newDiscordRNRequest("/users/@me", "GET")
-            req.setHeader("Authorization", token)
-            headers(req)
             val res = req.execute()
-            if (res.statusCode !in 200..299) return false
-            val json = try { res.json(JSONObject::class.java) } catch (_: Exception) { return false }
-            val premiumType = json.optInt("premium_type", 0)
-            log.info("hasNitro: premium_type=$premiumType")
-            premiumType > 0
+            if (res.statusCode !in 200..299) {
+                log.warn("hasNitroViaApi HTTP ${res.statusCode}")
+                return false
+            }
+            val json = res.json(JSONObject::class.java)
+            val pt = json.optInt("premium_type", 0)
+            log.info("hasNitroViaApi: premium_type=$pt")
+            pt > 0
         } catch (e: Exception) {
-            log.error("hasNitro exception", e)
+            log.error("hasNitroViaApi failed", e)
             false
         }
     }
 
     fun applyTheme(protoPayload: String): Pair<Boolean, String> {
         return try {
-            val req = headers(Http.Request.newDiscordRNRequest("/users/@me/settings-proto/1", "PATCH"))
+            val req = Http.Request.newDiscordRNRequest("/users/@me/settings-proto/1", "PATCH")
             req.setHeader("Content-Type", "application/json")
-            req.writeBody(JSONObject().put("settings", protoPayload).toString())
+            val body = JSONObject().put("settings", protoPayload).toString().toByteArray(Charsets.UTF_8)
+            req.conn.doOutput = true
+            req.conn.outputStream.write(body)
             val res = req.execute()
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
@@ -74,9 +80,11 @@ object DiscordApi {
         val p = primaryColor and 0xFFFFFF
         val a = accentColor and 0xFFFFFF
         return try {
-            val req = headers(Http.Request.newDiscordRNRequest("/users/@me/profile", "PATCH"))
+            val req = Http.Request.newDiscordRNRequest("/users/@me/profile", "PATCH")
             req.setHeader("Content-Type", "application/json")
-            req.writeBody(JSONObject().put("theme_colors", JSONArray().put(p).put(a)).toString())
+            val body = JSONObject().put("theme_colors", JSONArray().put(p).put(a)).toString().toByteArray(Charsets.UTF_8)
+            req.conn.doOutput = true
+            req.conn.outputStream.write(body)
             val res = req.execute()
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
@@ -91,7 +99,7 @@ object DiscordApi {
     fun getCurrentProfile(): JSONObject? {
         return try {
             val uid = StoreStream.getUsers().me.id.toString()
-            val req = headers(Http.Request.newDiscordRNRequest("/users/$uid/profile?with_mutual_guilds=false&with_mutual_friends_count=false", "GET"))
+            val req = Http.Request.newDiscordRNRequest("/users/$uid/profile?with_mutual_guilds=false&with_mutual_friends_count=false", "GET")
             val res = req.execute()
             if (res.statusCode in 200..299) res.json(JSONObject::class.java) else null
         } catch (e: Exception) {
