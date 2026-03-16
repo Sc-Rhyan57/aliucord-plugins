@@ -35,8 +35,24 @@ class REthemer : Plugin() {
 
     override fun start(context: Context) {
         log.info("REthemer starting")
+        ThemerEngine.init(context)
+        ThemerEngine.addPatches(patcher)
+        loadSavedTheme()
         patchSettingsButtons()
         patchProfileGradient()
+    }
+
+    private fun loadSavedTheme() {
+        try {
+            val prefs = com.aliucord.api.SettingsAPI("REthemer")
+            val savedThemeName = prefs.getString("active_theme", null)
+            if (savedThemeName != null) {
+                ThemerBridge.applyThemeFromFile(savedThemeName)
+                log.info("Loaded saved theme: $savedThemeName")
+            }
+        } catch (e: Exception) {
+            log.error("loadSavedTheme failed", e)
+        }
     }
 
     private fun patchSettingsButtons() {
@@ -64,8 +80,7 @@ class REthemer : Plugin() {
                         text = "App Theme"
                         typeface = ResourcesCompat.getFont(ctx, Constants.Fonts.whitney_semibold)
                         setCompoundDrawablesWithIntrinsicBounds(
-                            Utils.tintToTheme(ctx.getDrawable(R.e.ic_theme_24dp)),
-                            null, null, null
+                            Utils.tintToTheme(ctx.getDrawable(R.e.ic_theme_24dp)), null, null, null
                         )
                         post {
                             val w = paint.measureText(text.toString())
@@ -93,8 +108,7 @@ class REthemer : Plugin() {
                         text = "Profile Gradient"
                         typeface = ResourcesCompat.getFont(ctx, Constants.Fonts.whitney_semibold)
                         setCompoundDrawablesWithIntrinsicBounds(
-                            Utils.tintToTheme(ctx.getDrawable(R.e.ic_accessibility_24dp)),
-                            null, null, null
+                            Utils.tintToTheme(ctx.getDrawable(R.e.ic_accessibility_24dp)), null, null, null
                         )
                         setOnClickListener { Utils.openPageWithProxy(ctx, ProfileGradientPage()) }
                     }
@@ -133,152 +147,102 @@ class REthemer : Plugin() {
 
             fun findAncestorCard(v: View): CardView? {
                 var p: Any? = v.parent
-                while (p is View) {
-                    if (p is CardView) return p
-                    p = p.parent
-                }
+                while (p is View) { if (p is CardView) return p; p = p.parent }
                 return null
             }
 
             fun isDescendant(parent: ViewGroup, child: View): Boolean {
                 var p: Any? = child.parent
-                while (p is View) {
-                    if (p === parent) return true
-                    p = p.parent
-                }
+                while (p is View) { if (p === parent) return true; p = p.parent }
                 return false
             }
 
             actionsContainer.setBackgroundColor(0)
-            binding.J.apply {
-                setBackgroundColor(0)
-                (parent as View).setBackgroundColor(0)
-            }
+            binding.J.apply { setBackgroundColor(0); (parent as View).setBackgroundColor(0) }
 
             val ancestorCard = findAncestorCard(binding.h)
 
-            val cardViews = listOf(binding.b, binding.R, binding.j, (binding.n.parent as CardView), (binding.B.parent as CardView))
-            cardViews.forEach { card ->
+            listOf(binding.b, binding.R, binding.j, (binding.n.parent as CardView), (binding.B.parent as CardView)).forEach { card ->
                 if (ancestorCard != null && card === ancestorCard) return@forEach
-                card.setCardBackgroundColor(cardColor)
-                card.radius = 32f
-                card.cardElevation = 0f
-                card.maxCardElevation = 0f
+                card.setCardBackgroundColor(cardColor); card.radius = 32f; card.cardElevation = 0f; card.maxCardElevation = 0f
             }
 
             fun findEditButtonsContainer(start: ViewGroup): ViewGroup? {
-                val q = ArrayDeque<ViewGroup>()
-                q.add(start)
+                val q = ArrayDeque<ViewGroup>(); q.add(start)
                 while (q.isNotEmpty()) {
-                    val vg = q.removeFirst()
-                    var btnCount = 0
-                    for (i in 0 until vg.childCount) {
-                        val c = vg.getChildAt(i)
-                        if (c is Button && c.visibility == View.VISIBLE) btnCount++
-                    }
+                    val vg = q.removeFirst(); var btnCount = 0
+                    for (i in 0 until vg.childCount) { val c = vg.getChildAt(i); if (c is Button && c.visibility == View.VISIBLE) btnCount++ }
                     if (btnCount >= 2) {
-                        var hasEditHint = false
+                        var hasHint = false
                         for (i in 0 until vg.childCount) {
                             val c = vg.getChildAt(i)
                             if (c is Button && c.id != View.NO_ID) {
-                                try {
-                                    val name = vg.context.resources.getResourceEntryName(c.id)
-                                    if (name.contains("profile_edit") || name.contains("profile_identity") || name.contains("profile_actions") || name.contains("edit_profile")) {
-                                        hasEditHint = true; break
-                                    }
-                                } catch (_: Throwable) {}
+                                try { val n = vg.context.resources.getResourceEntryName(c.id); if (n.contains("profile_edit") || n.contains("edit_profile")) { hasHint = true; break } } catch (_: Throwable) {}
                             }
                         }
-                        if (hasEditHint) return vg
+                        if (hasHint) return vg
                     }
-                    for (i in 0 until vg.childCount) {
-                        val c = vg.getChildAt(i)
-                        if (c is ViewGroup) q.add(c)
-                    }
+                    for (i in 0 until vg.childCount) { val c = vg.getChildAt(i); if (c is ViewGroup) q.add(c) }
                 }
                 return null
             }
 
             val container = findEditButtonsContainer(root as ViewGroup) ?: findEditButtonsContainer(actionsContainer)
-            if (container != null) {
-                container.post {
-                    val buttons = mutableListOf<Button>()
-                    for (i in 0 until container.childCount) {
-                        val c = container.getChildAt(i)
-                        if (c is Button && c.visibility == View.VISIBLE) buttons.add(c)
-                    }
-                    if (buttons.size >= 2) {
-                        val btn1 = buttons[0]; val btn2 = buttons[1]
-                        val parent = btn1.parent as? ViewGroup
-                        if (parent != null) {
-                            val idx1 = parent.indexOfChild(btn1); val idx2 = parent.indexOfChild(btn2)
-                            val minIdx = kotlin.math.min(idx1, idx2); val maxIdx = kotlin.math.max(idx1, idx2)
-                            if (maxIdx >= 0) parent.removeViewAt(maxIdx)
-                            if (minIdx >= 0) parent.removeViewAt(minIdx)
-                            val newLinear = android.widget.LinearLayout(btn1.context).apply {
-                                orientation = android.widget.LinearLayout.VERTICAL
-                                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                            }
-                            parent.addView(newLinear, minIdx)
-                            val gap = (btn1.context.resources.displayMetrics.density * 8).toInt()
-                            newLinear.addView(btn1, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-                            newLinear.addView(btn2, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { it.topMargin = gap })
-                            val density = btn1.context.resources.displayMetrics.density
-                            val corner = 36f * density
-                            listOf(btn1, btn2).forEach { btn ->
-                                btn.background = GradientDrawable().apply { cornerRadius = corner; setColor(cardColor) }
-                                try { btn.backgroundTintList = android.content.res.ColorStateList.valueOf(cardColor) } catch (_: Throwable) {}
-                                btn.setPadding((12 * density).toInt(), (8 * density).toInt(), (12 * density).toInt(), (8 * density).toInt())
-                                val r = (cardColor shr 16) and 0xFF; val g = (cardColor shr 8) and 0xFF; val b = cardColor and 0xFF
-                                val lum = 0.299 * r + 0.587 * g + 0.114 * b
-                                (btn as? TextView)?.setTextColor(if (lum < 128) Color.WHITE else Color.BLACK)
-                            }
+            container?.post {
+                val buttons = mutableListOf<Button>()
+                for (i in 0 until container.childCount) { val c = container.getChildAt(i); if (c is Button && c.visibility == View.VISIBLE) buttons.add(c) }
+                if (buttons.size >= 2) {
+                    val btn1 = buttons[0]; val btn2 = buttons[1]; val parent = btn1.parent as? ViewGroup
+                    if (parent != null) {
+                        val idx1 = parent.indexOfChild(btn1); val idx2 = parent.indexOfChild(btn2)
+                        val minIdx = minOf(idx1, idx2); val maxIdx = maxOf(idx1, idx2)
+                        if (maxIdx >= 0) parent.removeViewAt(maxIdx); if (minIdx >= 0) parent.removeViewAt(minIdx)
+                        val nl = android.widget.LinearLayout(btn1.context).apply {
+                            orientation = android.widget.LinearLayout.VERTICAL
+                            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        }
+                        parent.addView(nl, minIdx)
+                        val gap = (btn1.context.resources.displayMetrics.density * 8).toInt()
+                        nl.addView(btn1, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                        nl.addView(btn2, android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { it.topMargin = gap })
+                        val density = btn1.context.resources.displayMetrics.density; val corner = 36f * density
+                        listOf(btn1, btn2).forEach { btn ->
+                            btn.background = GradientDrawable().apply { cornerRadius = corner; setColor(cardColor) }
+                            try { btn.backgroundTintList = android.content.res.ColorStateList.valueOf(cardColor) } catch (_: Throwable) {}
+                            btn.setPadding((12*density).toInt(), (8*density).toInt(), (12*density).toInt(), (8*density).toInt())
+                            val r=(cardColor shr 16) and 0xFF; val g=(cardColor shr 8) and 0xFF; val b=cardColor and 0xFF
+                            (btn as? TextView)?.setTextColor(if (0.299*r+0.587*g+0.114*b < 128) Color.WHITE else Color.BLACK)
                         }
                     }
                 }
             }
 
-            val buttonColor = cardColor
             listOf(binding.h, binding.I).forEachIndexed { idx, btn ->
                 val density = btn.context.resources.displayMetrics.density
-                btn.background = GradientDrawable().apply { cornerRadius = 36f * density; setColor(buttonColor) }
-                try { btn.backgroundTintList = android.content.res.ColorStateList.valueOf(buttonColor) } catch (_: Throwable) {}
-                btn.setPadding((12 * density).toInt(), (8 * density).toInt(), (12 * density).toInt(), (8 * density).toInt())
-                btn.layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
-                    if (idx > 0) it.topMargin = (density * 8).toInt()
-                }
-                val r = (buttonColor shr 16) and 0xFF; val g = (buttonColor shr 8) and 0xFF; val b = buttonColor and 0xFF
-                val lum = 0.299 * r + 0.587 * g + 0.114 * b
-                (btn as? TextView)?.setTextColor(if (lum < 128) Color.WHITE else Color.BLACK)
+                btn.background = GradientDrawable().apply { cornerRadius = 36f*density; setColor(cardColor) }
+                try { btn.backgroundTintList = android.content.res.ColorStateList.valueOf(cardColor) } catch (_: Throwable) {}
+                btn.setPadding((12*density).toInt(), (8*density).toInt(), (12*density).toInt(), (8*density).toInt())
+                btn.layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { if (idx > 0) it.topMargin = (density*8).toInt() }
+                val r=(cardColor shr 16) and 0xFF; val g=(cardColor shr 8) and 0xFF; val b=cardColor and 0xFF
+                (btn as? TextView)?.setTextColor(if (0.299*r+0.587*g+0.114*b < 128) Color.WHITE else Color.BLACK)
             }
 
-            try {
-                if (ancestorCard != null && isDescendant(ancestorCard as ViewGroup, binding.I)) {
-                    ancestorCard.setCardBackgroundColor(0)
-                }
-            } catch (_: Throwable) {}
+            try { if (ancestorCard != null && isDescendant(ancestorCard as ViewGroup, binding.I)) ancestorCard.setCardBackgroundColor(0) } catch (_: Throwable) {}
 
-            binding.B.apply {
-                boxBackgroundColor = cardColor
-                (parent as CardView).setCardBackgroundColor(cardColor)
-            }
+            binding.B.apply { boxBackgroundColor = cardColor; (parent as CardView).setCardBackgroundColor(cardColor) }
             binding.A.setBackgroundColor(0)
 
-            val connAlpha = 0xC0
-            val connColor = withAlpha(themeColors[1], connAlpha)
-            binding.n.apply {
-                setBackgroundColor(connColor)
-                (parent as CardView).setCardBackgroundColor(connColor)
-            }
+            val connColor = withAlpha(themeColors[1], 0xC0)
+            binding.n.apply { setBackgroundColor(connColor); (parent as CardView).setCardBackgroundColor(connColor) }
 
-            val gradAlpha = 0xB0
-            val gradColors = intArrayOf(withAlpha(themeColors[0], gradAlpha), withAlpha(themeColors[0], gradAlpha), withAlpha(themeColors[1], gradAlpha))
+            val gradColors = intArrayOf(withAlpha(themeColors[0], 0xB0), withAlpha(themeColors[0], 0xB0), withAlpha(themeColors[1], 0xB0))
             root.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, gradColors).apply { cornerRadius = 0f }
         }
     }
 
     override fun stop(context: Context) {
         patcher.unpatchAll()
+        ThemerEngine.clean()
         log.info("REthemer stopped")
     }
 }
