@@ -17,11 +17,9 @@ private fun dp(ctx: Context, n: Int) = (n * ctx.resources.displayMetrics.density
 class AppThemePage : SettingsPage() {
     private val log = Logger("REthemer/AppThemePage")
     private var selectedTheme: DiscordTheme? = null
-    private var previewGradient: View? = null
-    private var previewTitle: TextView? = null
-    private var previewSub: TextView? = null
+    private var previewCard: FrameLayout? = null
+    private var previewLabel: TextView? = null
     private var chipRow: LinearLayout? = null
-    private var themeNameLabel: TextView? = null
 
     override fun onViewBound(view: View) {
         super.onViewBound(view)
@@ -32,87 +30,79 @@ class AppThemePage : SettingsPage() {
     private fun buildUI(ctx: Context) {
         val root = linearLayout
 
-        val previewCard = FrameLayout(ctx).apply {
+        val card = FrameLayout(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 180)
-            ).also { it.setMargins(dp(ctx, 12), dp(ctx, 16), dp(ctx, 12), dp(ctx, 4)) }
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 190)
+            ).also { it.setMargins(dp(ctx, 12), dp(ctx, 16), dp(ctx, 12), dp(ctx, 8)) }
             background = GradientDrawable(
                 GradientDrawable.Orientation.BL_TR,
                 intArrayOf(Color.parseColor("#5865F2"), Color.parseColor("#EB459E"))
             ).apply { cornerRadius = dp(ctx, 16).toFloat() }
 
-            val overlay = View(ctx).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#22000000"))
-                    cornerRadius = dp(ctx, 16).toFloat()
-                }
-            }
-
             val inner = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
                 )
-                setPadding(dp(ctx, 20), 0, dp(ctx, 20), 0)
             }
-            previewTitle = TextView(ctx).apply {
+
+            val title = TextView(ctx).apply {
                 text = "App Theme"
                 setTextColor(Color.WHITE)
                 textSize = 22f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
             }
-            previewSub = TextView(ctx).apply {
+            val subtitle = TextView(ctx).apply {
                 text = "Select a theme below to preview"
                 setTextColor(Color.parseColor("#CCFFFFFF"))
                 textSize = 13f
                 gravity = Gravity.CENTER
                 setPadding(0, dp(ctx, 4), 0, 0)
             }
-            inner.addView(previewTitle)
-            inner.addView(previewSub)
-            addView(overlay)
+            previewLabel = subtitle
+            inner.addView(title)
+            inner.addView(subtitle)
             addView(inner)
-            previewGradient = this
+            previewCard = this
         }
-        root.addView(previewCard)
+        root.addView(card)
 
-        themeNameLabel = TextView(ctx).apply {
-            text = "Select a theme"
+        val themeNameTv = TextView(ctx).apply {
+            text = "This will change the theme across all your devices."
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 12f
             gravity = Gravity.CENTER
-            setPadding(0, dp(ctx, 6), 0, dp(ctx, 2))
+            setPadding(dp(ctx, 16), dp(ctx, 6), dp(ctx, 16), dp(ctx, 4))
         }
-        root.addView(themeNameLabel)
+        root.addView(themeNameTv)
 
         val hScroll = HorizontalScrollView(ctx).apply {
             isHorizontalScrollBarEnabled = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.setMargins(dp(ctx, 8), dp(ctx, 4), dp(ctx, 8), dp(ctx, 8)) }
+            ).also { it.setMargins(0, 0, 0, 0) }
         }
+
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(dp(ctx, 4), dp(ctx, 8), dp(ctx, 4), dp(ctx, 8))
+            setPadding(dp(ctx, 8), dp(ctx, 8), dp(ctx, 8), dp(ctx, 8))
         }
         chipRow = row
 
         DiscordThemes.THEMES.forEachIndexed { idx, theme ->
+            val sz = dp(ctx, 60)
             val chip = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.setMargins(dp(ctx, 5), 0, dp(ctx, 5), 0) }
+                ).also { it.setMargins(dp(ctx, 4), 0, dp(ctx, 4), 0) }
 
-                val sz = dp(ctx, 56)
                 val swatch = View(ctx).apply {
                     layoutParams = LinearLayout.LayoutParams(sz, sz)
                     background = GradientDrawable(
@@ -120,6 +110,7 @@ class AppThemePage : SettingsPage() {
                         intArrayOf(theme.primaryColor, theme.secondaryColor)
                     ).apply { cornerRadius = dp(ctx, 14).toFloat() }
                 }
+
                 val lbl = TextView(ctx).apply {
                     text = theme.name.take(9)
                     setTextColor(Color.parseColor("#B5BAC1"))
@@ -127,28 +118,22 @@ class AppThemePage : SettingsPage() {
                     gravity = Gravity.CENTER
                     setPadding(0, dp(ctx, 3), 0, 0)
                 }
+
                 addView(swatch)
                 addView(lbl)
 
                 setOnClickListener {
                     selectedTheme = theme
-                    themeNameLabel?.text = theme.name
+                    themeNameTv.text = theme.name
                     updatePreview(ctx, theme)
                     highlightChip(idx)
                 }
             }
             row.addView(chip)
         }
+
         hScroll.addView(row)
         root.addView(hScroll)
-
-        val divider = View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 1)
-            ).also { it.setMargins(dp(ctx, 16), 0, dp(ctx, 16), dp(ctx, 12)) }
-            setBackgroundColor(Color.parseColor("#2E3035"))
-        }
-        root.addView(divider)
 
         val applyBtn = TextView(ctx).apply {
             text = "Apply Theme"
@@ -162,7 +147,7 @@ class AppThemePage : SettingsPage() {
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 50)
-            ).also { it.setMargins(dp(ctx, 16), 0, dp(ctx, 16), dp(ctx, 6)) }
+            ).also { it.setMargins(dp(ctx, 16), dp(ctx, 8), dp(ctx, 16), dp(ctx, 4)) }
             setOnClickListener { applyTheme(ctx) }
         }
         root.addView(applyBtn)
@@ -172,17 +157,16 @@ class AppThemePage : SettingsPage() {
             setTextColor(Color.parseColor("#72767D"))
             textSize = 11f
             gravity = Gravity.CENTER
-            setPadding(dp(ctx, 20), 0, dp(ctx, 20), dp(ctx, 16))
+            setPadding(dp(ctx, 20), dp(ctx, 4), dp(ctx, 20), dp(ctx, 16))
         })
     }
 
     private fun updatePreview(ctx: Context, theme: DiscordTheme) {
-        previewGradient?.background = GradientDrawable(
+        previewCard?.background = GradientDrawable(
             GradientDrawable.Orientation.BL_TR,
             intArrayOf(theme.primaryColor, theme.secondaryColor)
         ).apply { cornerRadius = dp(ctx, 16).toFloat() }
-        previewTitle?.text = theme.name
-        previewSub?.text = if (theme.isDark) "Dark theme" else "Light theme"
+        previewLabel?.text = if (theme.isDark) "Dark theme" else "Light theme"
     }
 
     private fun highlightChip(selectedIdx: Int) {
@@ -193,7 +177,7 @@ class AppThemePage : SettingsPage() {
                 val bg = swatch.background as? GradientDrawable ?: continue
                 bg.setStroke(
                     if (i == selectedIdx) dp(chip.context, 3) else 0,
-                    if (i == selectedIdx) Color.WHITE else Color.TRANSPARENT
+                    Color.WHITE
                 )
             }
         }
@@ -212,8 +196,8 @@ class AppThemePage : SettingsPage() {
         }
 
         val dialog = AlertDialog.Builder(ctx)
-            .setTitle("Applying theme…")
-            .setMessage("'${theme.name}' is being applied…")
+            .setTitle("Applying…")
+            .setMessage("Applying '${theme.name}'…")
             .setCancelable(false)
             .create()
         dialog.show()
@@ -224,22 +208,18 @@ class AppThemePage : SettingsPage() {
 
             if (hasNitro) {
                 val (ok, resp) = DiscordApi.applyTheme(theme.protoPayload)
-                log.info("proto result: ok=$ok resp=$resp")
-                ThemerBridge.applyThemeToThemer(theme, theme.name)
-                Utils.mainThread.post {
-                    dialog.dismiss()
-                    if (ok) {
-                        toast(ctx, "Theme '${theme.name}' applied! Restart to see changes.")
-                    } else {
-                        toast(ctx, "Sync failed, applied client-side. Restart to see changes.")
-                    }
-                }
-            } else {
-                ThemerBridge.applyThemeToThemer(theme, theme.name)
-                Utils.mainThread.post {
-                    dialog.dismiss()
-                    toast(ctx, "Theme '${theme.name}' applied! Restart to see changes.")
-                }
+                log.info("proto: ok=$ok resp=$resp")
+            }
+
+            ThemerBridge.applyThemeToThemer(theme, theme.name)
+
+            Utils.mainThread.post {
+                dialog.dismiss()
+                val msg = if (hasNitro)
+                    "Theme '${theme.name}' applied! Restart to see changes."
+                else
+                    "Theme '${theme.name}' applied client-side! Restart to see changes."
+                toast(ctx, msg)
             }
         }
     }
