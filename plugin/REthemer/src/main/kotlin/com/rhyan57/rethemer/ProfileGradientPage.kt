@@ -12,6 +12,8 @@ import com.aliucord.Logger
 import com.aliucord.Utils
 import com.aliucord.fragments.SettingsPage
 
+private fun dp(ctx: Context, n: Int) = (n * ctx.resources.displayMetrics.density + 0.5f).toInt()
+
 class ProfileGradientPage : SettingsPage() {
     private val log = Logger("REthemer/ProfileGradient")
     private var primaryColor = Color.parseColor("#5865F2")
@@ -54,53 +56,48 @@ class ProfileGradientPage : SettingsPage() {
     }
 
     private fun updateSwatches(ctx: Context) {
-        primarySwatch?.background = swatchBg(primaryColor)
-        accentSwatch?.background  = swatchBg(accentColor)
+        primarySwatch?.background = swatchBg(ctx, primaryColor)
+        accentSwatch?.background  = swatchBg(ctx, accentColor)
         primaryHex?.text = "#%06X".format(primaryColor and 0xFFFFFF)
         accentHex?.text  = "#%06X".format(accentColor  and 0xFFFFFF)
         previewView?.background = GradientDrawable(
             GradientDrawable.Orientation.BL_TR, intArrayOf(primaryColor, accentColor)
-        ).apply { cornerRadius = Utils.dpToPx(14).toFloat() }
+        ).apply { cornerRadius = dp(ctx, 14).toFloat() }
     }
 
     private fun buildUI(ctx: Context) {
-        // Preview
         val preview = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Utils.dpToPx(120)
-            ).also { it.setMargins(Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(8)) }
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 120)
+            ).also { it.setMargins(dp(ctx, 12), dp(ctx, 12), dp(ctx, 12), dp(ctx, 8)) }
             background = GradientDrawable(GradientDrawable.Orientation.BL_TR,
                 intArrayOf(primaryColor, accentColor)
-            ).apply { cornerRadius = Utils.dpToPx(14).toFloat() }
+            ).apply { cornerRadius = dp(ctx, 14).toFloat() }
         }
         previewView = preview
         linearLayout.addView(preview)
 
-        // Primary color row
         sectionLabel(ctx, "Primary Color").let { linearLayout.addView(it) }
-        val primaryRow = colorRow(ctx, primaryColor, "Primary") { c ->
+        val (primaryRowView, primarySwatchView, primaryHexView) = colorRow(ctx, primaryColor, "Primary") { c ->
             primaryColor = c
             updateSwatches(ctx)
         }
-        primarySwatch = primaryRow.second
-        primaryHex = primaryRow.third
-        linearLayout.addView(primaryRow.first)
+        primarySwatch = primarySwatchView
+        primaryHex = primaryHexView
+        linearLayout.addView(primaryRowView)
 
-        // Accent color row
         sectionLabel(ctx, "Accent Color").let { linearLayout.addView(it) }
-        val accentRow = colorRow(ctx, accentColor, "Accent") { c ->
+        val (accentRowView, accentSwatchView, accentHexView) = colorRow(ctx, accentColor, "Accent") { c ->
             accentColor = c
             updateSwatches(ctx)
         }
-        accentSwatch = accentRow.second
-        accentHex = accentRow.third
-        linearLayout.addView(accentRow.first)
+        accentSwatch = accentSwatchView
+        accentHex = accentHexView
+        linearLayout.addView(accentRowView)
 
-        // Presets
         sectionLabel(ctx, "Quick Presets").let { linearLayout.addView(it) }
         buildPresets(ctx)
 
-        // Save button
         TextView(ctx).apply {
             text = "Save Profile Gradient"
             setTextColor(Color.WHITE)
@@ -109,11 +106,11 @@ class ProfileGradientPage : SettingsPage() {
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#5865F2"))
-                cornerRadius = Utils.dpToPx(14).toFloat()
+                cornerRadius = dp(ctx, 14).toFloat()
             }
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Utils.dpToPx(48)
-            ).also { it.setMargins(Utils.dpToPx(16), Utils.dpToPx(12), Utils.dpToPx(16), Utils.dpToPx(4)) }
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 48)
+            ).also { it.setMargins(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 4)) }
             setOnClickListener { saveGradient(ctx) }
         }.let { linearLayout.addView(it) }
 
@@ -121,33 +118,32 @@ class ProfileGradientPage : SettingsPage() {
             text = "This updates your profile gradient visible to everyone."
             setTextColor(Color.parseColor("#72767D"))
             textSize = 11f; gravity = Gravity.CENTER
-            setPadding(Utils.dpToPx(16), Utils.dpToPx(4), Utils.dpToPx(16), Utils.dpToPx(16))
+            setPadding(dp(ctx, 16), dp(ctx, 4), dp(ctx, 16), dp(ctx, 16))
         }.let { linearLayout.addView(it) }
     }
 
-    // Returns Triple<row view, swatch view, hex label>
     private fun colorRow(ctx: Context, color: Int, label: String, onPick: (Int) -> Unit): Triple<LinearLayout, View, TextView> {
         val swatch = View(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(Utils.dpToPx(40), Utils.dpToPx(40))
-            background = swatchBg(color)
+            layoutParams = LinearLayout.LayoutParams(dp(ctx, 40), dp(ctx, 40))
+            background = swatchBg(ctx, color)
         }
         val hex = TextView(ctx).apply {
             text = "#%06X".format(color and 0xFFFFFF)
             setTextColor(Color.parseColor("#72767D"))
             textSize = 12f
-            setPadding(0, 0, Utils.dpToPx(10), 0)
+            setPadding(0, 0, dp(ctx, 10), 0)
         }
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#1E1F26"))
-                cornerRadius = Utils.dpToPx(10).toFloat()
+                cornerRadius = dp(ctx, 10).toFloat()
             }
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Utils.dpToPx(58)
-            ).also { it.setMargins(Utils.dpToPx(12), Utils.dpToPx(2), Utils.dpToPx(12), Utils.dpToPx(4)) }
-            setPadding(Utils.dpToPx(14), 0, Utils.dpToPx(14), 0)
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 58)
+            ).also { it.setMargins(dp(ctx, 12), dp(ctx, 2), dp(ctx, 12), dp(ctx, 4)) }
+            setPadding(dp(ctx, 14), 0, dp(ctx, 14), 0)
             addView(TextView(ctx).apply {
                 text = label
                 setTextColor(Color.parseColor("#F2F3F5"))
@@ -169,17 +165,17 @@ class ProfileGradientPage : SettingsPage() {
             filters = arrayOf(InputFilter.LengthFilter(7))
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#2B2D31"))
-                cornerRadius = Utils.dpToPx(8).toFloat()
+                cornerRadius = dp(ctx, 8).toFloat()
             }
-            setPadding(Utils.dpToPx(12), Utils.dpToPx(10), Utils.dpToPx(12), Utils.dpToPx(10))
+            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
         }
         val colorPreview = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Utils.dpToPx(40)
-            ).also { it.setMargins(0, Utils.dpToPx(10), 0, 0) }
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 40)
+            ).also { it.setMargins(0, dp(ctx, 10), 0, 0) }
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#5865F2"))
-                cornerRadius = Utils.dpToPx(8).toFloat()
+                cornerRadius = dp(ctx, 8).toFloat()
             }
         }
         input.addTextChangedListener(object : android.text.TextWatcher {
@@ -187,14 +183,14 @@ class ProfileGradientPage : SettingsPage() {
             override fun onTextChanged(s: CharSequence?, st: Int, b: Int, c: Int) {}
             override fun afterTextChanged(e: android.text.Editable?) {
                 val h = e.toString().trim().let { if (it.startsWith("#")) it else "#$it" }
-                try { colorPreview.background = GradientDrawable().apply { setColor(Color.parseColor(h)); cornerRadius = Utils.dpToPx(8).toFloat() } } catch (_: Exception) {}
+                try { colorPreview.background = GradientDrawable().apply { setColor(Color.parseColor(h)); cornerRadius = dp(ctx, 8).toFloat() } } catch (_: Exception) {}
             }
         })
         val container = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.parseColor("#2B2D31"))
-            setPadding(Utils.dpToPx(20), Utils.dpToPx(16), Utils.dpToPx(20), Utils.dpToPx(12))
-            addView(TextView(ctx).apply { text = "Enter Hex Color"; setTextColor(Color.WHITE); textSize = 15f; typeface = android.graphics.Typeface.DEFAULT_BOLD; setPadding(0, 0, 0, Utils.dpToPx(10)) })
+            setPadding(dp(ctx, 20), dp(ctx, 16), dp(ctx, 20), dp(ctx, 12))
+            addView(TextView(ctx).apply { text = "Enter Hex Color"; setTextColor(Color.WHITE); textSize = 15f; typeface = android.graphics.Typeface.DEFAULT_BOLD; setPadding(0, 0, 0, dp(ctx, 10)) })
             addView(input)
             addView(colorPreview)
         }
@@ -217,7 +213,7 @@ class ProfileGradientPage : SettingsPage() {
         )
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(Utils.dpToPx(12), Utils.dpToPx(4), Utils.dpToPx(12), Utils.dpToPx(12))
+            setPadding(dp(ctx, 12), dp(ctx, 4), dp(ctx, 12), dp(ctx, 12))
         }
         presets.forEach { (name, colors) ->
             val (p, a) = colors
@@ -225,12 +221,12 @@ class ProfileGradientPage : SettingsPage() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also {
-                    it.setMargins(Utils.dpToPx(3), 0, Utils.dpToPx(3), 0)
+                    it.setMargins(dp(ctx, 3), 0, dp(ctx, 3), 0)
                 }
                 addView(View(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(Utils.dpToPx(44), Utils.dpToPx(44))
+                    layoutParams = LinearLayout.LayoutParams(dp(ctx, 44), dp(ctx, 44))
                     background = GradientDrawable(GradientDrawable.Orientation.BL_TR, intArrayOf(p, a)).apply {
-                        cornerRadius = Utils.dpToPx(10).toFloat()
+                        cornerRadius = dp(ctx, 10).toFloat()
                     }
                     setOnClickListener {
                         primaryColor = p; accentColor = a
@@ -241,7 +237,7 @@ class ProfileGradientPage : SettingsPage() {
                     text = name
                     setTextColor(Color.parseColor("#72767D"))
                     textSize = 9f; gravity = Gravity.CENTER
-                    setPadding(0, Utils.dpToPx(3), 0, 0)
+                    setPadding(0, dp(ctx, 3), 0, 0)
                 })
             }
             row.addView(col)
@@ -267,10 +263,10 @@ class ProfileGradientPage : SettingsPage() {
                     setTextColor(Color.WHITE)
                     textSize = 12f
                     typeface = android.graphics.Typeface.DEFAULT_BOLD
-                    setPadding(Utils.dpToPx(16), Utils.dpToPx(12), Utils.dpToPx(16), Utils.dpToPx(12))
+                    setPadding(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 12))
                     background = GradientDrawable().apply {
                         setColor(Color.parseColor(if (ok) "#23A55A" else "#ED4245"))
-                        cornerRadius = Utils.dpToPx(20).toFloat()
+                        cornerRadius = dp(ctx, 20).toFloat()
                     }
                 }
                 t.duration = Toast.LENGTH_LONG
@@ -285,12 +281,12 @@ class ProfileGradientPage : SettingsPage() {
         textSize = 10f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         letterSpacing = 0.08f
-        setPadding(Utils.dpToPx(16), Utils.dpToPx(10), Utils.dpToPx(16), Utils.dpToPx(4))
+        setPadding(dp(ctx, 16), dp(ctx, 10), dp(ctx, 16), dp(ctx, 4))
     }
 
-    private fun swatchBg(color: Int) = GradientDrawable().apply {
+    private fun swatchBg(ctx: Context, color: Int) = GradientDrawable().apply {
         shape = GradientDrawable.OVAL
         setColor(color)
-        setStroke(Utils.dpToPx(2), Color.parseColor("#3B3D44"))
+        setStroke(dp(ctx, 2), Color.parseColor("#3B3D44"))
     }
 }
