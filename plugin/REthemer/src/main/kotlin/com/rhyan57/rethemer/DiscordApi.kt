@@ -3,6 +3,7 @@ package com.rhyan57.rethemer
 import com.aliucord.Http
 import com.aliucord.Logger
 import com.discord.stores.StoreStream
+import com.discord.utilities.rest.RestAPI
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -10,6 +11,15 @@ object DiscordApi {
     private val log = Logger("REthemer/API")
 
     private val superProps = "eyJvcyI6IkFuZHJvaWQiLCJicm93c2VyIjoiQW5kcm9pZCBNb2JpbGUiLCJkZXZpY2UiOiJBbmRyb2lkIiwic3lzdGVtX2xvY2FsZSI6InB0LUJSIiwiaGFzX2NsaWVudF9tb2RzIjpmYWxzZSwiYnJvd3Nlcl91c2VyX2FnZW50IjoiTW96aWxsYS81LjAgKEFuZHJvaWQgMTI7IE1vYmlsZTsgcnY6MTQ4LjApIEdlY2tvLzE0OC4wIEZpcmVmb3gvMTQ4LjAiLCJicm93c2VyX3ZlcnNpb24iOiIxNDguMCIsIm9zX3ZlcnNpb24iOiIxMiIsInJlZmVycmVyIjoiIiwicmVmZXJyaW5nX2RvbWFpbiI6IiIsInJlZmVycmVyX2N1cnJlbnQiOiIiLCJyZWZlcnJpbmdfZG9tYWluX2N1cnJlbnQiOiIiLCJyZWxlYXNlX2NoYW5uZWwiOiJzdGFibGUiLCJjbGllbnRfYnVpbGRfbnVtYmVyIjo1MTA3MzMsImNsaWVudF9ldmVudF9zb3VyY2UiOm51bGx9"
+
+    private fun getAuthToken(): String? {
+        return try {
+            RestAPI.AppHeadersProvider.INSTANCE.authToken
+        } catch (e: Exception) {
+            log.error("getAuthToken failed", e)
+            null
+        }
+    }
 
     private fun headers(req: Http.Request): Http.Request {
         req.setHeader("X-Super-Properties", superProps)
@@ -28,7 +38,10 @@ object DiscordApi {
 
     fun hasNitro(): Boolean {
         return try {
-            val req = headers(Http.Request.newDiscordRNRequest("/users/@me", "GET"))
+            val token = getAuthToken() ?: return false
+            val req = Http.Request.newDiscordRNRequest("/users/@me", "GET")
+            req.setHeader("Authorization", token)
+            headers(req)
             val res = req.execute()
             if (res.statusCode !in 200..299) return false
             val json = try { res.json(JSONObject::class.java) } catch (_: Exception) { return false }
