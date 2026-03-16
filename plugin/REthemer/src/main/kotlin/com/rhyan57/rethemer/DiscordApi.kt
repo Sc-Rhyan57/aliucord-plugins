@@ -2,7 +2,6 @@ package com.rhyan57.rethemer
 
 import com.aliucord.Http
 import com.aliucord.Logger
-import com.discord.utilities.rest.RestAPI
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -28,10 +27,9 @@ object DiscordApi {
 
     fun hasNitro(): Boolean {
         return try {
-            val token = RestAPI.AppHeadersProvider.INSTANCE.authToken ?: return false
-            val req = Http.Request.newDiscordRNRequest("/users/@me", "GET")
-            req.setHeader("Authorization", token)
+            val req = headers(Http.Request.newDiscordRNRequest("/users/@me", "GET"))
             val res = req.execute()
+            if (res.statusCode !in 200..299) return false
             val json = try { res.json(JSONObject::class.java) } catch (_: Exception) { return false }
             val premiumType = json.optInt("premium_type", 0)
             log.info("hasNitro: premium_type=$premiumType")
@@ -85,8 +83,7 @@ object DiscordApi {
             val req = headers(Http.Request.newDiscordRNRequest("/users/$uid/profile?with_mutual_guilds=false&with_mutual_friends_count=false", "GET"))
             val res = req.execute()
             val code = res.statusCode
-            val json = try { res.json(JSONObject::class.java) } catch (e: Exception) { log.error("parse error", e); null }
-            log.info("getCurrentProfile: HTTP $code")
+            val json = try { res.json(JSONObject::class.java) } catch (e: Exception) { null }
             if (code in 200..299) json else null
         } catch (e: Exception) {
             log.error("getCurrentProfile exception", e)
