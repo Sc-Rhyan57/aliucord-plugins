@@ -33,22 +33,26 @@ class AppThemePage : SettingsPage() {
         val root = linearLayout
 
         previewCard = FrameLayout(ctx).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 190)).also {
-                it.setMargins(dp(ctx, 12), dp(ctx, 16), dp(ctx, 12), dp(ctx, 8))
-            }
-            background = GradientDrawable(GradientDrawable.Orientation.BL_TR, intArrayOf(Color.parseColor("#5865F2"), Color.parseColor("#EB459E"))).apply {
-                cornerRadius = dp(ctx, 16).toFloat()
-            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 190)
+            ).also { it.setMargins(dp(ctx, 12), dp(ctx, 16), dp(ctx, 12), dp(ctx, 8)) }
+            background = GradientDrawable(
+                GradientDrawable.Orientation.BL_TR,
+                intArrayOf(Color.parseColor("#5865F2"), Color.parseColor("#EB459E"))
+            ).apply { cornerRadius = dp(ctx, 16).toFloat() }
+
             val inner = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             }
             inner.addView(TextView(ctx).apply {
-                text = "App Theme"; setTextColor(Color.WHITE); textSize = 22f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+                text = "App Theme"; setTextColor(Color.WHITE); textSize = 22f
+                typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
             })
             previewSubtitle = TextView(ctx).apply {
                 text = "Select a theme below to preview"
-                setTextColor(Color.parseColor("#CCFFFFFF")); textSize = 13f; gravity = Gravity.CENTER; setPadding(0, dp(ctx, 4), 0, 0)
+                setTextColor(Color.parseColor("#CCFFFFFF")); textSize = 13f; gravity = Gravity.CENTER
+                setPadding(0, dp(ctx, 4), 0, 0)
             }
             inner.addView(previewSubtitle); addView(inner)
         }
@@ -66,7 +70,8 @@ class AppThemePage : SettingsPage() {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
         val row = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL; setPadding(dp(ctx, 8), dp(ctx, 8), dp(ctx, 8), dp(ctx, 8))
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(ctx, 8), dp(ctx, 8), dp(ctx, 8), dp(ctx, 8))
         }
         chipRow = row
 
@@ -74,14 +79,22 @@ class AppThemePage : SettingsPage() {
             val sz = dp(ctx, 60)
             row.addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).also {
-                    it.setMargins(dp(ctx, 4), 0, dp(ctx, 4), 0)
-                }
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.setMargins(dp(ctx, 4), 0, dp(ctx, 4), 0) }
+
+                val swatchBg: GradientDrawable
                 val swatch = View(ctx).apply {
                     layoutParams = LinearLayout.LayoutParams(sz, sz)
-                    background = GradientDrawable(GradientDrawable.Orientation.BL_TR, intArrayOf(theme.primaryColor, theme.secondaryColor)).apply {
-                        cornerRadius = dp(ctx, 14).toFloat()
+                    swatchBg = when (theme.id) {
+                        -3 -> GradientDrawable().apply { setColor(Color.parseColor("#000000")); cornerRadius = dp(ctx, 14).toFloat() }
+                        -2 -> GradientDrawable().apply { setColor(Color.parseColor("#F2F3F5")); cornerRadius = dp(ctx, 14).toFloat() }
+                        -1 -> GradientDrawable().apply { setColor(Color.parseColor("#313338")); cornerRadius = dp(ctx, 14).toFloat() }
+                        else -> GradientDrawable(GradientDrawable.Orientation.BL_TR, intArrayOf(theme.primaryColor, theme.secondaryColor)).apply {
+                            cornerRadius = dp(ctx, 14).toFloat()
+                        }
                     }
+                    background = swatchBg
                 }
                 addView(swatch)
                 addView(TextView(ctx).apply {
@@ -97,26 +110,37 @@ class AppThemePage : SettingsPage() {
         hScroll.addView(row); root.addView(hScroll)
 
         root.addView(TextView(ctx).apply {
-            text = "Apply Theme"; setTextColor(Color.WHITE); textSize = 15f; gravity = Gravity.CENTER; typeface = Typeface.DEFAULT_BOLD
+            text = "Apply Theme"; setTextColor(Color.WHITE); textSize = 15f; gravity = Gravity.CENTER
+            typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply { setColor(Color.parseColor("#5865F2")); cornerRadius = dp(ctx, 14).toFloat() }
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 50)).also {
-                it.setMargins(dp(ctx, 16), dp(ctx, 8), dp(ctx, 16), dp(ctx, 4))
-            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 50)
+            ).also { it.setMargins(dp(ctx, 16), dp(ctx, 8), dp(ctx, 16), dp(ctx, 4)) }
             setOnClickListener { applyTheme(ctx) }
         })
 
         root.addView(TextView(ctx).apply {
-            text = "With Nitro, syncs to all devices. Without Nitro, applied locally only."
+            text = "Nitro themes sync to all devices with Nitro. Base themes (Dark/Light/Midnight) apply locally."
             setTextColor(Color.parseColor("#72767D")); textSize = 11f; gravity = Gravity.CENTER
             setPadding(dp(ctx, 20), dp(ctx, 4), dp(ctx, 20), dp(ctx, 16))
         })
     }
 
     private fun updatePreview(ctx: Context, theme: DiscordTheme) {
-        previewCard?.background = GradientDrawable(GradientDrawable.Orientation.BL_TR, intArrayOf(theme.primaryColor, theme.secondaryColor)).apply {
-            cornerRadius = dp(ctx, 16).toFloat()
+        previewCard?.background = when (theme.id) {
+            -3 -> GradientDrawable().apply { setColor(Color.parseColor("#000000")); cornerRadius = dp(ctx, 16).toFloat() }
+            -2 -> GradientDrawable().apply { setColor(Color.parseColor("#F2F3F5")); cornerRadius = dp(ctx, 16).toFloat() }
+            -1 -> GradientDrawable().apply { setColor(Color.parseColor("#313338")); cornerRadius = dp(ctx, 16).toFloat() }
+            else -> GradientDrawable(GradientDrawable.Orientation.BL_TR, intArrayOf(theme.primaryColor, theme.secondaryColor)).apply {
+                cornerRadius = dp(ctx, 16).toFloat()
+            }
         }
-        previewSubtitle?.text = if (theme.isDark) "Dark theme" else "Light theme"
+        previewSubtitle?.text = when (theme.id) {
+            -3 -> "Midnight (AMOLED)"
+            -2 -> "Light theme"
+            -1 -> "Dark theme"
+            else -> if (theme.isDark) "Dark Nitro theme" else "Light Nitro theme"
+        }
     }
 
     private fun highlightChip(selectedIdx: Int) {
@@ -124,7 +148,9 @@ class AppThemePage : SettingsPage() {
             for (i in 0 until row.childCount) {
                 val chip = row.getChildAt(i) as? LinearLayout ?: continue
                 val swatch = chip.getChildAt(0) ?: continue
-                (swatch.background as? GradientDrawable)?.setStroke(if (i == selectedIdx) dp(chip.context, 3) else 0, Color.WHITE)
+                (swatch.background as? GradientDrawable)?.setStroke(
+                    if (i == selectedIdx) dp(chip.context, 3) else 0, Color.WHITE
+                )
             }
         }
     }
@@ -134,24 +160,24 @@ class AppThemePage : SettingsPage() {
 
         if (theme.id == 0) { Utils.openPageWithProxy(ctx, ThemerManagerPage()); return }
 
-        val dialog = AlertDialog.Builder(ctx).setTitle("Applying…").setMessage("Applying '${theme.name}'…").setCancelable(false).create()
+        val dialog = AlertDialog.Builder(ctx)
+            .setTitle("Applying…").setMessage("Applying '${theme.name}'…").setCancelable(false).create()
         dialog.show()
 
         Utils.threadPool.execute {
             val applied = ThemerBridge.applyTheme(theme)
-            log.info("ThemerBridge.applyTheme: $applied")
 
             if (applied) {
-                try {
-                    val prefs = SettingsAPI("REthemer")
-                    prefs.setString("active_theme", theme.name.replace(" ", "_"))
-                } catch (_: Exception) {}
+                try { SettingsAPI("REthemer").setString("active_theme", theme.name.replace(" ", "_")) } catch (_: Exception) {}
             }
 
-            val hasNitro = DiscordApi.hasNitro()
-            if (hasNitro) {
-                val (ok, resp) = DiscordApi.applyTheme(theme.protoPayload)
-                log.info("proto: ok=$ok resp=$resp")
+            if (theme.id > 0 && theme.protoPayload.isNotEmpty()) {
+                val hasNitro = DiscordApi.hasNitro()
+                log.info("applyTheme: hasNitro=$hasNitro theme=${theme.name}")
+                if (hasNitro) {
+                    val (ok, resp) = DiscordApi.applyTheme(theme.protoPayload)
+                    log.info("proto result: ok=$ok resp=$resp")
+                }
             }
 
             Utils.mainThread.post {
@@ -173,7 +199,8 @@ class AppThemePage : SettingsPage() {
             text = msg; setTextColor(Color.WHITE); textSize = 12f; typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 12))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor(if (error) "#ED4245" else "#23A55A")); cornerRadius = dp(ctx, 20).toFloat()
+                setColor(Color.parseColor(if (error) "#ED4245" else "#23A55A"))
+                cornerRadius = dp(ctx, 20).toFloat()
             }
         }
         t.duration = Toast.LENGTH_LONG; t.show()
