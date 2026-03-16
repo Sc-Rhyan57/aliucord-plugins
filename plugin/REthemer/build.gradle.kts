@@ -4,7 +4,7 @@ description = "Apply Discord's official Nitro app themes to Aliucord, edit your 
 aliucord {
     author("rhyan57", 896604349311115304L)
     changelog.set("""
-        # 1.0.0:
+        # 1.0:
         - Initial release
         - Apply all 28 Discord Nitro color themes to Aliucord via Themer
         - Theme preview before applying (live preview)
