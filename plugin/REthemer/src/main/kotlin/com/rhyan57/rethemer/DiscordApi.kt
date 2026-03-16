@@ -2,6 +2,7 @@ package com.rhyan57.rethemer
 
 import com.aliucord.Http
 import com.aliucord.Logger
+import com.discord.utilities.rest.RestAPI
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -23,6 +24,22 @@ object DiscordApi {
         val bytes = body.toByteArray(Charsets.UTF_8)
         conn.doOutput = true
         conn.outputStream.write(bytes)
+    }
+
+    fun hasNitro(): Boolean {
+        return try {
+            val token = RestAPI.AppHeadersProvider.INSTANCE.authToken ?: return false
+            val req = Http.Request.newDiscordRNRequest("/users/@me", "GET")
+            req.setHeader("Authorization", token)
+            val res = req.execute()
+            val json = try { res.json(JSONObject::class.java) } catch (_: Exception) { return false }
+            val premiumType = json.optInt("premium_type", 0)
+            log.info("hasNitro: premium_type=$premiumType")
+            premiumType > 0
+        } catch (e: Exception) {
+            log.error("hasNitro exception", e)
+            false
+        }
     }
 
     fun applyTheme(protoPayload: String): Pair<Boolean, String> {
@@ -65,12 +82,11 @@ object DiscordApi {
         return try {
             val me = com.discord.stores.StoreStream.getUsers().me
             val uid = me.id.toString()
-            log.info("getCurrentProfile: uid=$uid")
             val req = headers(Http.Request.newDiscordRNRequest("/users/$uid/profile?with_mutual_guilds=false&with_mutual_friends_count=false", "GET"))
             val res = req.execute()
             val code = res.statusCode
             val json = try { res.json(JSONObject::class.java) } catch (e: Exception) { log.error("parse error", e); null }
-            log.info("getCurrentProfile: HTTP $code json=$json")
+            log.info("getCurrentProfile: HTTP $code")
             if (code in 200..299) json else null
         } catch (e: Exception) {
             log.error("getCurrentProfile exception", e)
