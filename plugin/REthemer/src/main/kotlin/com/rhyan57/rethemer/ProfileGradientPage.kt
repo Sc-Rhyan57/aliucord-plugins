@@ -9,9 +9,6 @@ import android.widget.*
 import com.aliucord.Utils
 import com.aliucord.fragments.SettingsPage
 import com.aliucord.utils.DimenUtils
-import com.jaredrummler.android.colorpicker.ColorPickerDialog
-import com.discord.utilities.colors.ColorPickerUtils
-import com.lytefast.flexinput.R
 
 class ProfileGradientPage : SettingsPage() {
 
@@ -222,22 +219,7 @@ class ProfileGradientPage : SettingsPage() {
     }
 
     private fun showColorPicker(ctx: Context, current: Int, onPick: (Int) -> Unit) {
-        try {
-            val picker = ColorPickerUtils.INSTANCE.buildColorPickerDialog(
-                ctx,
-                Utils.getResId("color_picker_title", "string"),
-                current
-            )
-            picker.arguments?.putBoolean("alpha", false)
-            picker.setListener(object : b.k.a.a.f {
-                override fun onColorReset(c: Int) {}
-                override fun onColorSelected(id: Int, color: Int) { onPick(color) }
-                override fun onDialogDismissed(id: Int) {}
-            })
-            picker.show(parentFragmentManager, "color_picker")
-        } catch (_: Exception) {
-            showSimpleColorInput(ctx, current, onPick)
-        }
+        showSimpleColorInput(ctx, current, onPick)
     }
 
     private fun showSimpleColorInput(ctx: Context, current: Int, onPick: (Int) -> Unit) {
