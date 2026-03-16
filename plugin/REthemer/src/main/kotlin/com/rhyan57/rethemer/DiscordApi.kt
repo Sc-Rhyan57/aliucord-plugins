@@ -2,6 +2,7 @@ package com.rhyan57.rethemer
 
 import com.aliucord.Http
 import com.aliucord.Logger
+import com.discord.stores.StoreStream
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -27,21 +28,14 @@ object DiscordApi {
 
     fun hasNitro(): Boolean {
         return try {
-            val req = headers(Http.Request.newDiscordRNRequest("/users/@me", "GET"))
-            val res = req.execute()
-            if (res.statusCode !in 200..299) return false
-            val json = try { res.json(JSONObject::class.java) } catch (_: Exception) { return false }
-            val premiumType = json.optInt("premium_type", 0)
-            log.info("hasNitro: premium_type=$premiumType")
-            premiumType > 0
+            StoreStream.getUsers().me.premiumType > 0
         } catch (e: Exception) {
-            log.error("hasNitro exception", e)
+            log.error("hasNitro failed", e)
             false
         }
     }
 
     fun applyTheme(protoPayload: String): Pair<Boolean, String> {
-        log.info("applyTheme: payload=$protoPayload")
         return try {
             val req = headers(Http.Request.newDiscordRNRequest("/users/@me/settings-proto/1", "PATCH"))
             req.setHeader("Content-Type", "application/json")
@@ -49,18 +43,17 @@ object DiscordApi {
             val res = req.execute()
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
-            log.info("applyTheme: HTTP $code body=$resp")
+            log.info("applyTheme HTTP $code")
             (code in 200..299) to resp
         } catch (e: Exception) {
             log.error("applyTheme exception", e)
-            false to (e.message ?: "unknown error")
+            false to (e.message ?: "error")
         }
     }
 
     fun updateProfileGradient(primaryColor: Int, accentColor: Int): Pair<Boolean, String> {
         val p = primaryColor and 0xFFFFFF
         val a = accentColor and 0xFFFFFF
-        log.info("updateProfileGradient: primary=#%06X accent=#%06X".format(p, a))
         return try {
             val req = headers(Http.Request.newDiscordRNRequest("/users/@me/profile", "PATCH"))
             req.setHeader("Content-Type", "application/json")
@@ -68,23 +61,20 @@ object DiscordApi {
             val res = req.execute()
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
-            log.info("updateProfileGradient: HTTP $code resp=$resp")
+            log.info("updateProfileGradient HTTP $code")
             (code in 200..299) to resp
         } catch (e: Exception) {
             log.error("updateProfileGradient exception", e)
-            false to (e.message ?: "unknown error")
+            false to (e.message ?: "error")
         }
     }
 
     fun getCurrentProfile(): JSONObject? {
         return try {
-            val me = com.discord.stores.StoreStream.getUsers().me
-            val uid = me.id.toString()
+            val uid = StoreStream.getUsers().me.id.toString()
             val req = headers(Http.Request.newDiscordRNRequest("/users/$uid/profile?with_mutual_guilds=false&with_mutual_friends_count=false", "GET"))
             val res = req.execute()
-            val code = res.statusCode
-            val json = try { res.json(JSONObject::class.java) } catch (e: Exception) { null }
-            if (code in 200..299) json else null
+            if (res.statusCode in 200..299) res.json(JSONObject::class.java) else null
         } catch (e: Exception) {
             log.error("getCurrentProfile exception", e)
             null
