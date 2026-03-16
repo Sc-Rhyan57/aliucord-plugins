@@ -45,4 +45,9 @@ object ThemerBridge {
         val file = exportTheme(theme, name) ?: return false
         return file.exists()
     }
+
+    fun activateTheme(themeName: String): Boolean {
+        val file = File(themesDir, "$themeName.json")
+        return file.exists()
+    }
 }
