@@ -44,27 +44,80 @@ object DiscordThemes {
         DiscordTheme(28, "Twilight",            Color.parseColor("#4A148C"), Color.parseColor("#880E4F"), true,  "agwIARABGgQSAggcIAE=")
     )
 
-    fun toThemerSimpleColors(theme: DiscordTheme): Map<String, Int> {
-        val bg = if (theme.isDark) darken(theme.primaryColor, 0.15f) else lighten(theme.primaryColor, 0.7f)
-        val bgSecondary = if (theme.isDark) darken(theme.primaryColor, 0.25f) else lighten(theme.primaryColor, 0.6f)
-        return mapOf(
-            "accent" to theme.primaryColor,
-            "background" to bg,
-            "background_secondary" to bgSecondary
+    fun toThemerColors(theme: DiscordTheme): Pair<Map<String, Int>, Map<String, Int>> {
+        val p = theme.primaryColor
+        val s = theme.secondaryColor
+
+        fun blend(color: Int, base: Int, amount: Float): Int {
+            val r = (Color.red(color) * amount + Color.red(base) * (1f - amount)).toInt().coerceIn(0, 255)
+            val g = (Color.green(color) * amount + Color.green(base) * (1f - amount)).toInt().coerceIn(0, 255)
+            val b = (Color.blue(color) * amount + Color.blue(base) * (1f - amount)).toInt().coerceIn(0, 255)
+            return Color.rgb(r, g, b)
+        }
+
+        val black = Color.rgb(0, 0, 0)
+        val white = Color.rgb(255, 255, 255)
+        val discordBg    = Color.rgb(54,  57,  63)
+        val discordBgSec = Color.rgb(47,  49,  54)
+        val discordBgTer = Color.rgb(32,  34,  37)
+
+        val accent: Int
+        val bg: Int
+        val bgSec: Int
+        val bgTer: Int
+
+        if (theme.isDark) {
+            accent = p
+            bg     = blend(p, discordBgTer, 0.30f)
+            bgSec  = blend(p, discordBgSec, 0.25f)
+            bgTer  = blend(p, discordBg,    0.20f)
+        } else {
+            accent = p
+            bg     = blend(p, white, 0.85f)
+            bgSec  = blend(p, white, 0.75f)
+            bgTer  = blend(p, white, 0.65f)
+        }
+
+        val accentDark   = blend(p, black, 0.80f)
+        val accentDarker = blend(p, black, 0.70f)
+        val accentLight  = blend(p, white, 0.80f)
+
+        val mentionHighlight = Color.argb(0x30, Color.red(p), Color.green(p), Color.blue(p))
+
+        val simpleColors = mapOf(
+            "accent"             to accent,
+            "background"         to bg,
+            "background_secondary" to bgSec,
+            "mention_highlight"  to mentionHighlight,
+            "active_channel"     to blend(p, black, 0.60f),
+            "statusbar"          to bgTer,
+            "input_background"   to bgSec
         )
-    }
 
-    private fun darken(color: Int, factor: Float): Int {
-        val r = (Color.red(color) * (1 - factor)).toInt().coerceIn(0, 255)
-        val g = (Color.green(color) * (1 - factor)).toInt().coerceIn(0, 255)
-        val b = (Color.blue(color) * (1 - factor)).toInt().coerceIn(0, 255)
-        return Color.rgb(r, g, b)
-    }
+        val colors = mapOf(
+            "brand_new"          to accent,
+            "brand_new_230"      to blend(accent, white, 0.60f),
+            "brand_new_360"      to accent,
+            "brand_new_500"      to accent,
+            "brand_new_530"      to accentDark,
+            "brand_new_560"      to accentDark,
+            "brand_new_600"      to accentDarker,
+            "link"               to accent,
+            "link_light"         to accentLight,
+            "primary_500"        to bgSec,
+            "primary_600"        to bg,
+            "primary_630"        to bgSec,
+            "primary_660"        to bgSec,
+            "primary_700"        to bgSec,
+            "primary_800"        to bg,
+            "primary_dark_600"   to bg,
+            "primary_dark_630"   to bgSec,
+            "primary_dark_660"   to bgSec,
+            "primary_dark_700"   to bgSec,
+            "primary_dark_800"   to bg,
+            "dark_grey_2"        to bg
+        )
 
-    private fun lighten(color: Int, factor: Float): Int {
-        val r = (Color.red(color) + (255 - Color.red(color)) * factor).toInt().coerceIn(0, 255)
-        val g = (Color.green(color) + (255 - Color.green(color)) * factor).toInt().coerceIn(0, 255)
-        val b = (Color.blue(color) + (255 - Color.blue(color)) * factor).toInt().coerceIn(0, 255)
-        return Color.rgb(r, g, b)
+        return simpleColors to colors
     }
 }
