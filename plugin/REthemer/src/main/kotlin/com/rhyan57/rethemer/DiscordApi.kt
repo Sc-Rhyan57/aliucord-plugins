@@ -19,14 +19,19 @@ object DiscordApi {
         return req
     }
 
+    private fun Http.Request.writeBody(body: String) {
+        val bytes = body.toByteArray(Charsets.UTF_8)
+        conn.doOutput = true
+        conn.outputStream.write(bytes)
+    }
+
     fun applyTheme(protoPayload: String): Pair<Boolean, String> {
         log.info("applyTheme: payload=$protoPayload")
         return try {
             val req = headers(Http.Request.newDiscordRNRequest("/users/@me/settings-proto/1", "PATCH"))
             req.setHeader("Content-Type", "application/json")
-            val body = JSONObject().put("settings", protoPayload).toString()
-            log.info("applyTheme body: $body")
-            val res = req.execute(body)
+            req.writeBody(JSONObject().put("settings", protoPayload).toString())
+            val res = req.execute()
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
             log.info("applyTheme: HTTP $code body=$resp")
@@ -44,9 +49,8 @@ object DiscordApi {
         return try {
             val req = headers(Http.Request.newDiscordRNRequest("/users/@me/profile", "PATCH"))
             req.setHeader("Content-Type", "application/json")
-            val body = JSONObject().put("theme_colors", JSONArray().put(p).put(a)).toString()
-            log.info("updateProfileGradient body: $body")
-            val res = req.execute(body)
+            req.writeBody(JSONObject().put("theme_colors", JSONArray().put(p).put(a)).toString())
+            val res = req.execute()
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
             log.info("updateProfileGradient: HTTP $code resp=$resp")
