@@ -2,9 +2,12 @@ package com.rhyan57.rethemer
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Paint
 import android.graphics.Shader
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
@@ -27,6 +30,9 @@ import com.discord.widgets.settings.WidgetSettings
 import com.discord.widgets.user.usersheet.WidgetUserSheet
 import com.discord.widgets.user.usersheet.WidgetUserSheetViewModel
 import com.lytefast.flexinput.R
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 @AliucordPlugin
 class REthemer : Plugin() {
@@ -45,11 +51,9 @@ class REthemer : Plugin() {
     private fun loadSavedTheme() {
         try {
             val prefs = com.aliucord.api.SettingsAPI("REthemer")
-            val savedThemeName = prefs.getString("active_theme", null)
-            if (savedThemeName != null) {
-                ThemerBridge.applyThemeFromFile(savedThemeName)
-                log.info("Loaded saved theme: $savedThemeName")
-            }
+            val savedThemeName = prefs.getString("active_theme", null) ?: return
+            ThemerBridge.applyThemeFromFile(savedThemeName)
+            log.info("Loaded saved theme: $savedThemeName")
         } catch (e: Exception) {
             log.error("loadSavedTheme failed", e)
         }
@@ -71,8 +75,7 @@ class REthemer : Plugin() {
                     val insertAt = if (baseIndex >= 0) baseIndex + 1 else layout.childCount
 
                     layout.addView(View(ctx).apply {
-                        tag = "rethemer_injected"
-                        visibility = View.GONE
+                        tag = "rethemer_injected"; visibility = View.GONE
                         layoutParams = LinearLayoutCompat.LayoutParams(0, 0)
                     }, insertAt)
 
@@ -85,8 +88,7 @@ class REthemer : Plugin() {
                         post {
                             val w = paint.measureText(text.toString())
                             ValueAnimator.ofFloat(0f, 360f).apply {
-                                duration = 2500
-                                repeatCount = ValueAnimator.INFINITE
+                                duration = 2500; repeatCount = ValueAnimator.INFINITE
                                 addUpdateListener { anim ->
                                     val hue = anim.animatedValue as Float
                                     val colors = intArrayOf(
@@ -94,7 +96,7 @@ class REthemer : Plugin() {
                                         Color.HSVToColor(floatArrayOf((hue + 120f) % 360f, 0.7f, 1f)),
                                         Color.HSVToColor(floatArrayOf((hue + 240f) % 360f, 0.7f, 1f))
                                     )
-                                    paint.shader = LinearGradient(0f, 0f, w, 0f, colors, null, Shader.TileMode.CLAMP)
+                                    paint.shader = android.graphics.LinearGradient(0f, 0f, w, 0f, colors, null, Shader.TileMode.CLAMP)
                                     invalidate()
                                 }
                                 start()
@@ -136,6 +138,9 @@ class REthemer : Plugin() {
                     ?: profile.userProfile?.run { themeColors ?: accentColor?.let { c -> intArrayOf(c, c) } }
                     ?: return@after
 
+            val primaryInt = themeColors[0]
+            val accentInt  = if (themeColors.size > 1) themeColors[1] else themeColors[0]
+
             val binding = WidgetUserSheet.`access$getBinding$p`(this)
             val actionsContainer = binding.D
             val root = actionsContainer.parent.parent.parent as NestedScrollView
@@ -143,7 +148,7 @@ class REthemer : Plugin() {
             fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)
 
             val cardAlpha = 0xD0
-            val cardColor = withAlpha(themeColors[0], cardAlpha)
+            val cardColor = withAlpha(primaryInt, cardAlpha)
 
             fun findAncestorCard(v: View): CardView? {
                 var p: Any? = v.parent
@@ -177,7 +182,10 @@ class REthemer : Plugin() {
                         for (i in 0 until vg.childCount) {
                             val c = vg.getChildAt(i)
                             if (c is Button && c.id != View.NO_ID) {
-                                try { val n = vg.context.resources.getResourceEntryName(c.id); if (n.contains("profile_edit") || n.contains("edit_profile")) { hasHint = true; break } } catch (_: Throwable) {}
+                                try {
+                                    val n = vg.context.resources.getResourceEntryName(c.id)
+                                    if (n.contains("profile_edit") || n.contains("edit_profile")) { hasHint = true; break }
+                                } catch (_: Throwable) {}
                             }
                         }
                         if (hasHint) return vg
@@ -222,21 +230,54 @@ class REthemer : Plugin() {
                 btn.background = GradientDrawable().apply { cornerRadius = 36f*density; setColor(cardColor) }
                 try { btn.backgroundTintList = android.content.res.ColorStateList.valueOf(cardColor) } catch (_: Throwable) {}
                 btn.setPadding((12*density).toInt(), (8*density).toInt(), (12*density).toInt(), (8*density).toInt())
-                btn.layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also { if (idx > 0) it.topMargin = (density*8).toInt() }
+                btn.layoutParams = android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).also {
+                    if (idx > 0) it.topMargin = (density*8).toInt()
+                }
                 val r=(cardColor shr 16) and 0xFF; val g=(cardColor shr 8) and 0xFF; val b=cardColor and 0xFF
                 (btn as? TextView)?.setTextColor(if (0.299*r+0.587*g+0.114*b < 128) Color.WHITE else Color.BLACK)
             }
 
-            try { if (ancestorCard != null && isDescendant(ancestorCard as ViewGroup, binding.I)) ancestorCard.setCardBackgroundColor(0) } catch (_: Throwable) {}
+            try {
+                if (ancestorCard != null && isDescendant(ancestorCard as ViewGroup, binding.I)) ancestorCard.setCardBackgroundColor(0)
+            } catch (_: Throwable) {}
 
             binding.B.apply { boxBackgroundColor = cardColor; (parent as CardView).setCardBackgroundColor(cardColor) }
             binding.A.setBackgroundColor(0)
 
-            val connColor = withAlpha(themeColors[1], 0xC0)
+            val connColor = withAlpha(accentInt, 0xC0)
             binding.n.apply { setBackgroundColor(connColor); (parent as CardView).setCardBackgroundColor(connColor) }
 
-            val gradColors = intArrayOf(withAlpha(themeColors[0], 0xB0), withAlpha(themeColors[0], 0xB0), withAlpha(themeColors[1], 0xB0))
-            root.background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, gradColors).apply { cornerRadius = 0f }
+            root.background = object : Drawable() {
+                private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+                override fun draw(canvas: Canvas) {
+                    val w = bounds.width().toFloat()
+                    val h = bounds.height().toFloat()
+                    if (w <= 0f || h <= 0f) return
+
+                    val cx = w / 2f; val cy = h / 2f
+                    val angleRad = (135.0 * Math.PI / 180.0)
+                    val diag = sqrt(w * w + h * h) / 2f
+                    val cosA = cos(angleRad).toFloat(); val sinA = sin(angleRad).toFloat()
+
+                    val color1 = withAlpha(primaryInt, 0xB0)
+                    val color2 = withAlpha(accentInt,  0xB0)
+
+                    paint.shader = LinearGradient(
+                        cx - cosA * diag, cy - sinA * diag,
+                        cx + cosA * diag, cy + sinA * diag,
+                        intArrayOf(color1, color1, color2),
+                        floatArrayOf(0f, 0.4f, 1f),
+                        Shader.TileMode.CLAMP
+                    )
+                    canvas.drawRect(bounds, paint)
+                }
+
+                override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+                override fun setColorFilter(cf: android.graphics.ColorFilter?) { paint.colorFilter = cf }
+                @Suppress("OVERRIDE_DEPRECATION")
+                override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
+            }
         }
     }
 
