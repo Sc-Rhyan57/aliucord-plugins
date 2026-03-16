@@ -9,6 +9,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import com.aliucord.Logger
+import com.aliucord.PluginManager
 import com.aliucord.Utils
 import com.aliucord.fragments.SettingsPage
 
@@ -31,7 +32,7 @@ class AppThemePage : SettingsPage() {
     private fun buildUI(ctx: Context) {
         val root = linearLayout
 
-        val card = FrameLayout(ctx).apply {
+        previewCard = FrameLayout(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 190)
             ).also { it.setMargins(dp(ctx, 12), dp(ctx, 16), dp(ctx, 12), dp(ctx, 8)) }
@@ -41,7 +42,8 @@ class AppThemePage : SettingsPage() {
             ).apply { cornerRadius = dp(ctx, 16).toFloat() }
 
             val inner = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
                 layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             }
             inner.addView(TextView(ctx).apply {
@@ -55,9 +57,8 @@ class AppThemePage : SettingsPage() {
             }
             inner.addView(previewSubtitle)
             addView(inner)
-            previewCard = this
         }
-        root.addView(card)
+        root.addView(previewCard)
 
         themeNameLabel = TextView(ctx).apply {
             text = "This will change the theme across all your devices."
@@ -143,7 +144,15 @@ class AppThemePage : SettingsPage() {
     private fun applyTheme(ctx: Context) {
         val theme = selectedTheme ?: run { toast(ctx, "Select a theme first", true); return }
 
-        if (theme.id == 0) { Utils.openPageWithProxy(ctx, ThemerManagerPage()); return }
+        if (theme.id == 0) {
+            Utils.openPageWithProxy(ctx, ThemerManagerPage())
+            return
+        }
+
+        if (PluginManager.plugins["Themer"] == null) {
+            toast(ctx, "Themer plugin is required! Install it first.", true)
+            return
+        }
 
         val dialog = AlertDialog.Builder(ctx)
             .setTitle("Applying…").setMessage("Applying '${theme.name}'…").setCancelable(false).create()
@@ -158,11 +167,17 @@ class AppThemePage : SettingsPage() {
                 log.info("proto: ok=$ok resp=$resp")
             }
 
-            ThemerBridge.applyThemeToThemer(theme, theme.name)
+            val applied = ThemerBridge.applyThemeToThemer(theme, theme.name)
+            log.info("ThemerBridge.applyThemeToThemer: $applied")
 
             Utils.mainThread.post {
                 dialog.dismiss()
-                toast(ctx, "Theme '${theme.name}' applied! Restart to see changes.")
+                if (applied) {
+                    toast(ctx, "Theme '${theme.name}' applied! Restarting…")
+                    Utils.appActivity.recreate()
+                } else {
+                    toast(ctx, "Failed to write theme file.", true)
+                }
             }
         }
     }
