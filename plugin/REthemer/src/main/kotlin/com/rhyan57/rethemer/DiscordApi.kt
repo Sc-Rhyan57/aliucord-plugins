@@ -19,25 +19,24 @@ object DiscordApi {
         return req
     }
 
-    // Apply a Nitro theme via settings-proto
     fun applyTheme(protoPayload: String): Pair<Boolean, String> {
         log.info("applyTheme: payload=$protoPayload")
         return try {
             val req = headers(Http.Request.newDiscordRNRequest("/users/@me/settings-proto/1", "PATCH"))
             req.setHeader("Content-Type", "application/json")
-            req.setRequestBody(JSONObject().put("settings", protoPayload).toString())
-            val res = req.execute()
+            val body = JSONObject().put("settings", protoPayload).toString()
+            log.info("applyTheme body: $body")
+            val res = req.execute(body)
             val code = res.statusCode
-            val body = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
-            log.info("applyTheme: HTTP $code body=$body")
-            (code in 200..299) to body
+            val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
+            log.info("applyTheme: HTTP $code body=$resp")
+            (code in 200..299) to resp
         } catch (e: Exception) {
             log.error("applyTheme exception", e)
             false to (e.message ?: "unknown error")
         }
     }
 
-    // Update profile gradient colors (theme_colors)
     fun updateProfileGradient(primaryColor: Int, accentColor: Int): Pair<Boolean, String> {
         val p = primaryColor and 0xFFFFFF
         val a = accentColor and 0xFFFFFF
@@ -47,8 +46,7 @@ object DiscordApi {
             req.setHeader("Content-Type", "application/json")
             val body = JSONObject().put("theme_colors", JSONArray().put(p).put(a)).toString()
             log.info("updateProfileGradient body: $body")
-            req.setRequestBody(body)
-            val res = req.execute()
+            val res = req.execute(body)
             val code = res.statusCode
             val resp = try { res.json(JSONObject::class.java).toString() } catch (_: Exception) { "parse_error" }
             log.info("updateProfileGradient: HTTP $code resp=$resp")
@@ -59,7 +57,6 @@ object DiscordApi {
         }
     }
 
-    // Get current user profile to read existing theme_colors
     fun getCurrentProfile(): JSONObject? {
         return try {
             val me = com.discord.stores.StoreStream.getUsers().me
