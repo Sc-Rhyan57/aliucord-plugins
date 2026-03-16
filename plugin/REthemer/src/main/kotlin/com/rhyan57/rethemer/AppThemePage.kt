@@ -8,8 +8,9 @@ import android.view.Gravity
 import android.view.View
 import android.widget.*
 import com.aliucord.Logger
-import com.aliucord.Utils
 import com.aliucord.fragments.SettingsPage
+
+private fun dp(ctx: Context, n: Int) = (n * ctx.resources.displayMetrics.density + 0.5f).toInt()
 
 class AppThemePage : SettingsPage() {
     private val log = Logger("REthemer/AppThemePage")
@@ -26,31 +27,28 @@ class AppThemePage : SettingsPage() {
     }
 
     private fun buildUI(ctx: Context) {
-        // Preview card
         val preview = makePreviewCard(ctx)
         linearLayout.addView(preview)
 
-        // Selected label
         selectedLabel = TextView(ctx).apply {
             text = "Select a theme below"
             setTextColor(Color.parseColor("#B5BAC1"))
             textSize = 12f
             gravity = Gravity.CENTER
-            setPadding(0, Utils.dpToPx(4), 0, Utils.dpToPx(8))
+            setPadding(0, dp(ctx, 4), 0, dp(ctx, 8))
         }
         linearLayout.addView(selectedLabel)
 
-        // Horizontal chip row
         val hScroll = HorizontalScrollView(ctx).apply {
             isHorizontalScrollBarEnabled = false
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.setMargins(Utils.dpToPx(8), 0, Utils.dpToPx(8), Utils.dpToPx(12)) }
+            ).also { it.setMargins(dp(ctx, 8), 0, dp(ctx, 8), dp(ctx, 12)) }
         }
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(Utils.dpToPx(4), Utils.dpToPx(8), Utils.dpToPx(4), Utils.dpToPx(8))
+            setPadding(dp(ctx, 4), dp(ctx, 8), dp(ctx, 4), dp(ctx, 8))
         }
         chipRow = row
         DiscordThemes.THEMES.forEachIndexed { i, theme ->
@@ -60,7 +58,6 @@ class AppThemePage : SettingsPage() {
         hScroll.addView(row)
         linearLayout.addView(hScroll)
 
-        // Apply button
         val applyBtn = TextView(ctx).apply {
             text = "Apply Theme"
             setTextColor(Color.WHITE)
@@ -69,11 +66,11 @@ class AppThemePage : SettingsPage() {
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#5865F2"))
-                cornerRadius = Utils.dpToPx(14).toFloat()
+                cornerRadius = dp(ctx, 14).toFloat()
             }
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Utils.dpToPx(48)
-            ).also { it.setMargins(Utils.dpToPx(16), 0, Utils.dpToPx(16), Utils.dpToPx(8)) }
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 48)
+            ).also { it.setMargins(dp(ctx, 16), 0, dp(ctx, 16), dp(ctx, 8)) }
             setOnClickListener { applyTheme(ctx) }
         }
         linearLayout.addView(applyBtn)
@@ -83,7 +80,7 @@ class AppThemePage : SettingsPage() {
             setTextColor(Color.parseColor("#72767D"))
             textSize = 11f
             gravity = Gravity.CENTER
-            setPadding(Utils.dpToPx(16), 0, Utils.dpToPx(16), Utils.dpToPx(16))
+            setPadding(dp(ctx, 16), 0, dp(ctx, 16), dp(ctx, 16))
         }
         linearLayout.addView(note)
     }
@@ -91,11 +88,11 @@ class AppThemePage : SettingsPage() {
     private fun makePreviewCard(ctx: Context): FrameLayout {
         return FrameLayout(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, Utils.dpToPx(160)
-            ).also { it.setMargins(Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(12), Utils.dpToPx(4)) }
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 160)
+            ).also { it.setMargins(dp(ctx, 12), dp(ctx, 12), dp(ctx, 12), dp(ctx, 4)) }
             background = GradientDrawable(GradientDrawable.Orientation.BL_TR,
                 intArrayOf(Color.parseColor("#5865F2"), Color.parseColor("#EB459E"))
-            ).apply { cornerRadius = Utils.dpToPx(14).toFloat() }
+            ).apply { cornerRadius = dp(ctx, 14).toFloat() }
 
             val inner = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
@@ -120,27 +117,27 @@ class AppThemePage : SettingsPage() {
     }
 
     private fun makeChip(ctx: Context, theme: DiscordTheme, idx: Int): LinearLayout {
-        val sz = Utils.dpToPx(52)
+        val sz = dp(ctx, 52)
         return LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.setMargins(Utils.dpToPx(4), 0, Utils.dpToPx(4), 0) }
+            ).also { it.setMargins(dp(ctx, 4), 0, dp(ctx, 4), 0) }
 
             val swatch = View(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(sz, sz)
                 background = GradientDrawable(GradientDrawable.Orientation.BL_TR,
                     intArrayOf(theme.primaryColor, theme.secondaryColor)
-                ).apply { cornerRadius = Utils.dpToPx(12).toFloat() }
+                ).apply { cornerRadius = dp(ctx, 12).toFloat() }
             }
             val lbl = TextView(ctx).apply {
                 text = theme.name.take(8)
                 setTextColor(Color.parseColor("#B5BAC1"))
                 textSize = 9f
                 gravity = Gravity.CENTER
-                setPadding(0, Utils.dpToPx(3), 0, 0)
+                setPadding(0, dp(ctx, 3), 0, 0)
             }
             addView(swatch)
             addView(lbl)
@@ -149,13 +146,12 @@ class AppThemePage : SettingsPage() {
                 selectedId = theme.id
                 selectedLabel?.text = theme.name
                 log.info("Selected theme: ${theme.name}")
-                // highlight selected
                 chipRow?.let { row ->
                     for (i in 0 until row.childCount) {
                         val child = row.getChildAt(i) as? LinearLayout ?: continue
                         val sw = child.getChildAt(0) ?: continue
                         (sw.background as? GradientDrawable)?.setStroke(
-                            if (i == idx) Utils.dpToPx(3) else 0,
+                            if (i == idx) dp(ctx, 3) else 0,
                             Color.WHITE
                         )
                     }
@@ -177,10 +173,10 @@ class AppThemePage : SettingsPage() {
             .setCancelable(false)
             .create()
         d.show()
-        Utils.threadPool.execute {
+        com.aliucord.Utils.threadPool.execute {
             val (ok, resp) = DiscordApi.applyTheme(theme.protoPayload)
             log.info("applyTheme result: ok=$ok resp=$resp")
-            Utils.mainThread.post {
+            com.aliucord.Utils.mainThread.post {
                 d.dismiss()
                 toast(ctx, if (ok) "Theme '${theme.name}' applied! Restart to see changes." else "Failed: $resp", !ok)
             }
@@ -194,10 +190,10 @@ class AppThemePage : SettingsPage() {
             setTextColor(Color.WHITE)
             textSize = 12f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(Utils.dpToPx(16), Utils.dpToPx(12), Utils.dpToPx(16), Utils.dpToPx(12))
+            setPadding(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 12))
             background = GradientDrawable().apply {
                 setColor(Color.parseColor(if (error) "#ED4245" else "#23A55A"))
-                cornerRadius = Utils.dpToPx(20).toFloat()
+                cornerRadius = dp(ctx, 20).toFloat()
             }
         }
         t.duration = Toast.LENGTH_LONG
