@@ -12,8 +12,6 @@ import com.aliucord.Logger
 import com.aliucord.Utils
 import com.aliucord.fragments.SettingsPage
 import com.discord.utilities.colors.ColorPickerUtils
-import com.jaredrummler.android.colorpicker.ColorPickerDialog
-import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 
 private fun dp(ctx: Context, n: Int) = (n * ctx.resources.displayMetrics.density + 0.5f).toInt()
 
@@ -110,14 +108,13 @@ class ProfileGradientPage : SettingsPage() {
         }
         root.addView(saveBtn)
 
-        val note = TextView(ctx).apply {
-            text = "Updates your profile gradient visible to everyone (requires Nitro)."
+        root.addView(TextView(ctx).apply {
+            text = "Syncing to all devices requires Nitro. Otherwise saved locally only."
             setTextColor(Color.parseColor("#72767D"))
             textSize = 11f
             gravity = Gravity.CENTER
             setPadding(dp(ctx, 16), dp(ctx, 4), dp(ctx, 16), dp(ctx, 16))
-        }
-        root.addView(note)
+        })
     }
 
     private fun openColorPicker(ctx: Context, initialColor: Int, isAccent: Boolean) {
@@ -128,20 +125,17 @@ class ProfileGradientPage : SettingsPage() {
                 initialColor
             )
             picker.arguments?.putBoolean("alpha", false)
-            picker.setListener(object : ColorPickerDialogListener {
-                override fun onColorSelected(dialogId: Int, color: Int) {
-                    if (isAccent) {
-                        accentColor = color
-                    } else {
-                        primaryColor = color
-                    }
+            picker.k = object : b.k.a.a.f {
+                override fun onColorReset(color: Int) {}
+                override fun onColorSelected(id: Int, color: Int) {
+                    if (isAccent) accentColor = color else primaryColor = color
                     updateSwatches(ctx)
                 }
-                override fun onDialogDismissed(dialogId: Int) {}
-            })
+                override fun onDialogDismissed(id: Int) {}
+            }
             picker.show(parentFragmentManager, if (isAccent) "AccentPicker" else "PrimaryPicker")
         } catch (e: Exception) {
-            log.error("ColorPicker failed, falling back to hex dialog", e)
+            log.error("ColorPicker failed, falling back", e)
             showHexFallback(ctx, initialColor, isAccent)
         }
     }
@@ -150,7 +144,6 @@ class ProfileGradientPage : SettingsPage() {
         val input = EditText(ctx).apply {
             setText("#%06X".format(initialColor and 0xFFFFFF))
             setTextColor(Color.parseColor("#F2F3F5"))
-            setHintTextColor(Color.parseColor("#72767D"))
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#2B2D31"))
                 cornerRadius = dp(ctx, 8).toFloat()
@@ -166,12 +159,9 @@ class ProfileGradientPage : SettingsPage() {
                     val c = Color.parseColor(h)
                     if (isAccent) accentColor = c else primaryColor = c
                     updateSwatches(ctx)
-                } catch (e: Exception) {
-                    log.error("bad hex", e)
-                }
+                } catch (e: Exception) { log.error("bad hex", e) }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            .setNegativeButton("Cancel", null).show()
     }
 
     private fun colorRow(ctx: Context, color: Int, label: String, onClick: () -> Unit): Triple<LinearLayout, View, TextView> {
@@ -212,11 +202,11 @@ class ProfileGradientPage : SettingsPage() {
     private fun buildPresets(ctx: Context) {
         val presets = listOf(
             "Blurple" to (Color.parseColor("#5865F2") to Color.parseColor("#4752C4")),
-            "Pink" to (Color.parseColor("#EB459E") to Color.parseColor("#A12D6A")),
-            "Ocean" to (Color.parseColor("#00B4D8") to Color.parseColor("#0077B6")),
-            "Forest" to (Color.parseColor("#57F287") to Color.parseColor("#2D6A4F")),
+            "Pink"    to (Color.parseColor("#EB459E") to Color.parseColor("#A12D6A")),
+            "Ocean"   to (Color.parseColor("#00B4D8") to Color.parseColor("#0077B6")),
+            "Forest"  to (Color.parseColor("#57F287") to Color.parseColor("#2D6A4F")),
             "Crimson" to (Color.parseColor("#ED4245") to Color.parseColor("#A12D2F")),
-            "Aurora" to (Color.parseColor("#7B2FF7") to Color.parseColor("#6DD5FA"))
+            "Aurora"  to (Color.parseColor("#7B2FF7") to Color.parseColor("#6DD5FA"))
         )
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -236,16 +226,14 @@ class ProfileGradientPage : SettingsPage() {
                         cornerRadius = dp(ctx, 12).toFloat()
                     }
                     setOnClickListener {
-                        primaryColor = p
-                        accentColor = a
+                        primaryColor = p; accentColor = a
                         updateSwatches(ctx)
                     }
                 })
                 addView(TextView(ctx).apply {
                     text = name
                     setTextColor(Color.parseColor("#72767D"))
-                    textSize = 9f
-                    gravity = Gravity.CENTER
+                    textSize = 9f; gravity = Gravity.CENTER
                     setPadding(0, dp(ctx, 3), 0, 0)
                 })
             }
@@ -258,22 +246,21 @@ class ProfileGradientPage : SettingsPage() {
         val dialog = AlertDialog.Builder(ctx)
             .setTitle("Saving…")
             .setMessage("Updating your profile gradient…")
-            .setCancelable(false)
-            .create()
+            .setCancelable(false).create()
         dialog.show()
         Utils.threadPool.execute {
             val hasNitro = DiscordApi.hasNitro()
-            if (!hasNitro) {
+            if (hasNitro) {
+                val (ok, resp) = DiscordApi.updateProfileGradient(primaryColor, accentColor)
                 Utils.mainThread.post {
                     dialog.dismiss()
-                    toast(ctx, "Profile gradient requires Nitro to sync. Saved locally.", false)
+                    toast(ctx, if (ok) "Profile gradient saved!" else "Failed: $resp", !ok)
                 }
-                return@execute
-            }
-            val (ok, resp) = DiscordApi.updateProfileGradient(primaryColor, accentColor)
-            Utils.mainThread.post {
-                dialog.dismiss()
-                toast(ctx, if (ok) "Profile gradient saved!" else "Failed: $resp", !ok)
+            } else {
+                Utils.mainThread.post {
+                    dialog.dismiss()
+                    toast(ctx, "Nitro required to sync profile gradient.", true)
+                }
             }
         }
     }
@@ -281,8 +268,7 @@ class ProfileGradientPage : SettingsPage() {
     private fun sectionLabel(ctx: Context, text: String) = TextView(ctx).apply {
         this.text = text.uppercase()
         setTextColor(Color.parseColor("#72767D"))
-        textSize = 10f
-        typeface = Typeface.DEFAULT_BOLD
+        textSize = 10f; typeface = Typeface.DEFAULT_BOLD
         letterSpacing = 0.08f
         setPadding(dp(ctx, 16), dp(ctx, 10), dp(ctx, 16), dp(ctx, 4))
     }
@@ -297,9 +283,7 @@ class ProfileGradientPage : SettingsPage() {
     private fun toast(ctx: Context, msg: String, error: Boolean = false) {
         val t = Toast(ctx)
         t.view = TextView(ctx).apply {
-            text = msg
-            setTextColor(Color.WHITE)
-            textSize = 12f
+            text = msg; setTextColor(Color.WHITE); textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(ctx, 16), dp(ctx, 12), dp(ctx, 16), dp(ctx, 12))
             background = GradientDrawable().apply {
@@ -307,7 +291,6 @@ class ProfileGradientPage : SettingsPage() {
                 cornerRadius = dp(ctx, 20).toFloat()
             }
         }
-        t.duration = Toast.LENGTH_LONG
-        t.show()
+        t.duration = Toast.LENGTH_LONG; t.show()
     }
 }
